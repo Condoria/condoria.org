@@ -118,6 +118,7 @@ export default function SketchEditorPage() {
   const [maxheight, setMaxheight] = useState(25);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pageOrigin, setPageOrigin] = useState("");
   const [editingBrush, setEditingBrush] = useState<string | null>(null);
   const paintRef = useRef(false);
   const paintModeRef = useRef<"paint" | "erase" | null>(null);
@@ -181,6 +182,20 @@ export default function SketchEditorPage() {
   const previewEnabled = !planError;
   const preview = useSketchPreview(draftUrl, previewEnabled);
   const elevationDisplayRows = elevationEnabled ? maxheight + 1 : 0;
+
+  const absoluteUrl = pageOrigin ? `${pageOrigin}${draftUrl}` : draftUrl;
+
+  useEffect(() => {
+    setPageOrigin(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    if (!copied) {
+      return;
+    }
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
 
   const syncRowsTextFromGrid = useCallback((nextGrid: CellChar[][]) => {
     setRowsText(gridToRowsText(nextGrid));
@@ -339,12 +354,9 @@ export default function SketchEditorPage() {
     return () => window.removeEventListener("mouseup", stopPainting);
   }, [toggleCell]);
 
-  const handleCopy = async () => {
-    if (preview.status !== "ready") {
-      return;
-    }
-    const absolute = typeof window !== "undefined" ? `${window.location.origin}${draftUrl}` : draftUrl;
-    await navigator.clipboard.writeText(absolute);
+  const handleCopyUrl = async () => {
+    const url = pageOrigin ? `${pageOrigin}${draftUrl}` : draftUrl;
+    await navigator.clipboard.writeText(url);
     setCopied(true);
   };
 
@@ -686,15 +698,7 @@ export default function SketchEditorPage() {
               </div>
             </div>
 
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.buttonSecondary}
-                onClick={handleCopy}
-                disabled={preview.status !== "ready"}
-              >
-                {copied ? "Copied!" : "Copy URL"}
-              </button>
+            <div className={styles.previewMeta}>
               <span className={styles.previewStatus} data-status={preview.status}>
                 {preview.status === "loading" && "Updating preview…"}
                 {preview.status === "ready" && "Preview ready"}
@@ -703,7 +707,17 @@ export default function SketchEditorPage() {
               </span>
             </div>
 
-            <div className={styles.urlBox}>{draftUrl}</div>
+            <button
+              type="button"
+              className={`${styles.urlCopy} ${copied ? styles.urlCopyCopied : ""}`}
+              onClick={handleCopyUrl}
+              aria-label={copied ? "URL copied" : "Copy sketch URL"}
+            >
+              <span className={styles.urlCopyText}>{absoluteUrl}</span>
+              <span className={styles.urlCopyHover} aria-hidden>
+                {copied ? "Copied!" : "Copy URL"}
+              </span>
+            </button>
 
             <div className={styles.previewFrame}>
               {planError ? (
