@@ -12,3 +12,11 @@ export function validatePlanSetback(
   plotWidth: number,
   plotDepth: number,
 ): string | null;
+
+export function isPlotLimitedCell(
+  row: number,
+  col: number,
+  plan: { enabled: boolean; width: number; depth: number; setback: number },
+  gridCols: number,
+  gridRows: number,
+): boolean;
