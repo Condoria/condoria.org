@@ -1,11 +1,20 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_STYLES,
   TRANSPARENT_CHAR,
-  serializeStylesParam,
   type CellStyleMap,
 } from "@/lib/sketch/editor-types";
+import {
+  editorStateFromImportUrl,
+  editorStateFromQuery,
+  gridToRowsText,
+  hasSketchQuery,
+  sketchApiPathFromState,
+  sketchSearchParamsFromState,
+  type EditorState,
+} from "@/lib/sketch/editor-url";
 import {
   getEffectivePlanSize,
   maxSetbackForPlot,
@@ -20,10 +29,6 @@ function createEmptyGrid(rows: number, cols: number, fill: CellChar = TRANSPAREN
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => fill));
 }
 
-function gridToRowsText(grid: CellChar[][]) {
-  return grid.map((row) => row.join("")).join("\n");
-}
-
 function parseRowsText(text: string): CellChar[][] {
   const lines = text
     .split(/\r?\n/)
@@ -34,47 +39,6 @@ function parseRowsText(text: string): CellChar[][] {
   }
   const cols = Math.max(...lines.map((line) => line.length));
   return lines.map((line) => line.padEnd(cols, TRANSPARENT_CHAR).split(""));
-}
-
-function gridToRowsParam(grid: CellChar[][]) {
-  return grid.map((row) => row.join("")).join("|");
-}
-
-function buildSketchUrl(params: {
-  title: string;
-  subtitle: string;
-  grid: CellChar[][];
-  styleMap: CellStyleMap;
-  planEnabled: boolean;
-  width: number;
-  depth: number;
-  setback: number;
-  maxheight: number;
-  elevationEnabled: boolean;
-  showover: boolean;
-}) {
-  const search = new URLSearchParams();
-  search.set("title", params.title || "Zoning Regulation");
-  search.set("rows", gridToRowsParam(params.grid));
-  search.set("styles", serializeStylesParam(params.styleMap));
-
-  if (params.subtitle.trim()) {
-    search.set("subtitle", params.subtitle.trim());
-  }
-  if (params.planEnabled) {
-    search.set("plan", "1");
-    search.set("width", String(params.width));
-    search.set("depth", String(params.depth));
-    search.set("setback", String(params.setback));
-    search.set("maxheight", String(params.maxheight));
-  }
-  if (params.elevationEnabled) {
-    search.set("elevation", "1");
-    search.set("maxheight", String(params.maxheight));
-    search.set("showover", params.showover ? "1" : "0");
-  }
-
-  return `/api/render-sketch?${search.toString()}`;
 }
 
 function nextStyleKey(styleMap: CellStyleMap) {
@@ -103,6 +67,10 @@ function planCellZone(
 }
 
 export default function SketchEditorPage() {
+  const router = useRouter();
+  const urlHydratedRef = useRef(false);
+  const skipUrlSyncRef = useRef(true);
+
   const [title, setTitle] = useState("Rail Pattern");
   const [subtitle, setSubtitle] = useState("");
   const [styleMap, setStyleMap] = useState<CellStyleMap>(() => ({ ...DEFAULT_STYLES }));
@@ -117,6 +85,8 @@ export default function SketchEditorPage() {
   const [setback, setSetback] = useState(1);
   const [maxheight, setMaxheight] = useState(25);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [importUrl, setImportUrl] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pageOrigin, setPageOrigin] = useState("");
   const [editingBrush, setEditingBrush] = useState<string | null>(null);
@@ -150,34 +120,37 @@ export default function SketchEditorPage() {
     setSetback((current) => Math.min(current, maxSetbackForPlot(gridCols, gridRows)));
   }, [planEnabled, gridCols, gridRows]);
 
-  const draftUrl = useMemo(
-    () =>
-      buildSketchUrl({
-        title,
-        subtitle,
-        grid,
-        styleMap,
-        planEnabled,
-        width: plotWidth,
-        depth: plotDepth,
-        setback,
-        maxheight,
-        elevationEnabled,
-        showover: true,
-      }),
-    [
+  const editorState = useMemo<EditorState>(
+    () => ({
       title,
       subtitle,
       grid,
       styleMap,
       planEnabled,
-      plotWidth,
-      plotDepth,
       setback,
       maxheight,
       elevationEnabled,
-    ],
+      showover: true,
+    }),
+    [title, subtitle, grid, styleMap, planEnabled, setback, maxheight, elevationEnabled],
   );
+
+  const draftUrl = useMemo(
+    () => sketchApiPathFromState(editorState),
+    [editorState],
+  );
+
+  const editorQueryString = useMemo(
+    () => sketchSearchParamsFromState(editorState).toString(),
+    [editorState],
+  );
+
+  const [debouncedEditorQuery, setDebouncedEditorQuery] = useState(editorQueryString);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedEditorQuery(editorQueryString), 400);
+    return () => window.clearTimeout(timer);
+  }, [editorQueryString]);
 
   const previewEnabled = !planError;
   const preview = useSketchPreview(draftUrl, previewEnabled);
@@ -200,6 +173,59 @@ export default function SketchEditorPage() {
   const syncRowsTextFromGrid = useCallback((nextGrid: CellChar[][]) => {
     setRowsText(gridToRowsText(nextGrid));
   }, []);
+
+  const applyEditorState = useCallback((state: EditorState) => {
+    setTitle(state.title);
+    setSubtitle(state.subtitle);
+    setStyleMap(state.styleMap);
+    setGrid(state.grid);
+    setRowsText(gridToRowsText(state.grid));
+    setPlanEnabled(state.planEnabled);
+    setSetback(state.setback);
+    setMaxheight(state.maxheight);
+    setElevationEnabled(state.elevationEnabled);
+    setBrush(Object.keys(state.styleMap).sort((a, b) => a.localeCompare(b))[0] ?? "a");
+    setEditingBrush(null);
+    setImportError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!router.isReady || urlHydratedRef.current) {
+      return;
+    }
+    urlHydratedRef.current = true;
+    if (hasSketchQuery(router.query)) {
+      const loaded = editorStateFromQuery(router.query);
+      if (loaded) {
+        applyEditorState(loaded);
+      }
+    }
+    skipUrlSyncRef.current = false;
+  }, [router.isReady, router.query, applyEditorState]);
+
+  useEffect(() => {
+    if (!router.isReady || skipUrlSyncRef.current) {
+      return;
+    }
+    const currentQuery = router.asPath.includes("?") ? router.asPath.split("?")[1] : "";
+    if (currentQuery === debouncedEditorQuery) {
+      return;
+    }
+    const nextPath = debouncedEditorQuery
+      ? `/sketch-editor?${debouncedEditorQuery}`
+      : "/sketch-editor";
+    router.replace(nextPath, undefined, { shallow: true });
+  }, [debouncedEditorQuery, router]);
+
+  const handleImportFromUrl = useCallback(() => {
+    const loaded = editorStateFromImportUrl(importUrl);
+    if (!loaded) {
+      setImportError("Paste a valid /api/render-sketch or /sketch-editor URL.");
+      return;
+    }
+    applyEditorState(loaded);
+    setImportUrl("");
+  }, [importUrl, applyEditorState]);
 
   const resizeGrid = useCallback(
     (rows: number, cols: number) => {
@@ -684,7 +710,8 @@ export default function SketchEditorPage() {
           <section className={`${styles.panel} ${styles.outputPanel}`}>
             <h2>Export preview</h2>
             <p className={styles.fieldHint}>
-              Preview updates automatically. One canvas cell equals one Minecraft block.
+              Preview updates automatically. The browser address bar saves your work — reload or
+              share that link to restore the editor. Copy the row below for the API image URL.
             </p>
 
             <div className={styles.row2}>
@@ -758,21 +785,39 @@ export default function SketchEditorPage() {
               onClick={() => setShowAdvanced((open) => !open)}
               aria-expanded={showAdvanced}
             >
-              {showAdvanced ? "Hide" : "Show"} advanced · rows text import
+              {showAdvanced ? "Hide" : "Show"} advanced · import &amp; rows text
             </button>
             {showAdvanced && (
-              <div className={styles.field}>
-                <label htmlFor="rows-text">Rows text (top line = top row)</label>
-                <textarea
-                  id="rows-text"
-                  value={rowsText}
-                  onChange={(e) => setRowsText(e.target.value)}
-                  placeholder={"ababa\n-b-b-"}
-                />
-                <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
-                  Apply rows text
-                </button>
-              </div>
+              <>
+                <div className={styles.field}>
+                  <label htmlFor="import-url">Import from sketch URL</label>
+                  <input
+                    id="import-url"
+                    value={importUrl}
+                    onChange={(e) => {
+                      setImportUrl(e.target.value);
+                      setImportError(null);
+                    }}
+                    placeholder="https://condoria.vercel.app/api/render-sketch?title=..."
+                  />
+                  <button type="button" className={styles.buttonSecondary} onClick={handleImportFromUrl}>
+                    Import project
+                  </button>
+                  {importError && <p className={styles.fieldError}>{importError}</p>}
+                </div>
+                <div className={styles.field}>
+                  <label htmlFor="rows-text">Rows text (top line = top row)</label>
+                  <textarea
+                    id="rows-text"
+                    value={rowsText}
+                    onChange={(e) => setRowsText(e.target.value)}
+                    placeholder={"ababa\n-b-b-"}
+                  />
+                  <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
+                    Apply rows text
+                  </button>
+                </div>
+              </>
             )}
           </section>
         </div>
