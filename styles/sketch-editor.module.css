@@ -3,10 +3,11 @@
   background: #f4f1ec;
   color: #1a1a1a;
   padding: 2rem clamp(1rem, 4vw, 3rem);
+  user-select: none;
 }
 
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .header h1 {
@@ -22,15 +23,21 @@
   line-height: 1.5;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(320px, 440px) 1fr;
-  gap: 1.5rem;
-  align-items: start;
+.workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
-@media (max-width: 900px) {
-  .layout {
+.row1 {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 360px);
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+@media (max-width: 960px) {
+  .row1 {
     grid-template-columns: 1fr;
   }
 }
@@ -46,17 +53,70 @@
 .panel h2 {
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-.field {
+.paintPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+}
+
+.paintToolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.paintToolbar h2 {
+  margin-bottom: 0;
+}
+
+.paintCanvas {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(#ece7df 1px, transparent 1px),
+    linear-gradient(90deg, #ece7df 1px, transparent 1px);
+  background-size: 16px 16px;
+  background-color: #f3efe8;
+  border: 1px solid #cfc7ba;
+  border-radius: 10px;
+  padding: 1.5rem;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.brushPanel {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.outputPanel {
+  user-select: text;
+}
+
+.field,
+.fieldCompact {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   margin-bottom: 0.9rem;
 }
 
-.field label {
+.fieldCompact {
+  margin-bottom: 0;
+  min-width: 5rem;
+}
+
+.field label,
+.fieldCompact label {
   font-size: 0.85rem;
   color: #444;
   font-weight: 600;
@@ -64,12 +124,14 @@
 
 .field input,
 .field select,
-.field textarea {
+.field textarea,
+.fieldCompact input {
   border: 1px solid #cfc7ba;
   border-radius: 8px;
   padding: 0.55rem 0.7rem;
   font: inherit;
   background: #fff;
+  user-select: text;
 }
 
 .field textarea {
@@ -89,234 +151,54 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.6rem;
   font-size: 0.9rem;
-}
-
-.viewTabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-
-.viewTab,
-.viewTabActive {
-  border: 1px solid #cfc7ba;
-  border-radius: 999px;
-  padding: 0.35rem 0.85rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  background: #fff;
-}
-
-.viewTabActive {
-  background: #2c3e50;
-  color: #fff;
-  border-color: #2c3e50;
-}
-
-.palette {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.swatch {
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  padding: 0.35rem 0.55rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  background: #fff;
-}
-
-.swatchActive {
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  padding: 0.35rem 0.55rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-  background: #fff;
-  outline: 2px solid #2c3e50;
-}
-
-.gridEditor {
-  display: grid;
-  gap: 2px;
-  width: fit-content;
-  max-width: 100%;
-  overflow: auto;
-  margin-bottom: 0.75rem;
-}
-
-.gridCell {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.gridCellWood {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #a67c52;
-  color: #fff;
-}
-
-.gridCellStone {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #4a5568;
-  color: #fff;
-}
-
-.gridCellGap {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #faf8f5;
-  color: #888;
-}
-
-.gridCellEmpty {
-  width: 28px;
-  height: 28px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  color: #ccc;
-}
-
-.actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-
-.button,
-.buttonSecondary {
-  border: none;
-  border-radius: 8px;
-  padding: 0.65rem 1rem;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.button {
-  background: #2c3e50;
-  color: #fff;
-}
-
-.buttonSecondary {
-  background: #e8e2d8;
-  color: #2c3e50;
-}
-
-.urlBox {
-  width: 100%;
-  border: 1px dashed #bbb;
-  border-radius: 8px;
-  padding: 0.75rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.78rem;
-  word-break: break-all;
-  background: #fff;
-  margin-bottom: 1rem;
-  line-height: 1.45;
-}
-
-.previewFrame {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 1rem;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.previewFrame img {
-  max-width: 100%;
-  height: auto;
-}
-
-.placeholder {
-  color: #888;
-  font-style: italic;
+  user-select: none;
 }
 
 .hint {
   font-size: 0.8rem;
   color: #777;
-  margin-bottom: 0.5rem;
-}
-
-.sectionGap {
-  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .brushRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.45rem;
   margin-bottom: 1rem;
 }
 
 .brush,
 .brushActive {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 20px 1.5rem 1fr;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   border: 1px solid #cfc7ba;
   border-radius: 8px;
-  padding: 0.35rem 0.6rem;
+  padding: 0.45rem 0.65rem;
   font-size: 0.82rem;
   cursor: pointer;
   background: #fff;
+  text-align: left;
 }
 
 .brushActive {
   outline: 2px solid #2c3e50;
+  background: #f0f4f8;
+}
+
+.brushKey {
+  font-weight: 700;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.brushLabel {
+  color: #555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brushSwatch {
@@ -363,21 +245,109 @@
   font-size: 0.8rem;
 }
 
-.featureBlock {
-  margin: 0 0 0.75rem 0.5rem;
-  padding-left: 0.75rem;
-  border-left: 2px solid #ddd5c8;
+.featuresRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-.gridCellBtn {
-  width: 30px;
-  height: 30px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 700;
+@media (max-width: 700px) {
+  .featuresRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureGroup {
+  border: 1px solid #e5ddd0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.featureBlock {
+  margin-top: 0.35rem;
+  padding-left: 0.25rem;
+}
+
+.gridEditor {
+  display: grid;
+  gap: 2px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.gridCell {
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
   cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+}
+
+.button,
+.buttonSecondary {
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button {
+  background: #2c3e50;
+  color: #fff;
+}
+
+.buttonSecondary {
+  background: #e8e2d8;
+  color: #2c3e50;
+}
+
+.urlBox {
+  width: 100%;
+  border: 1px dashed #bbb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  word-break: break-all;
+  background: #fff;
+  margin-bottom: 1rem;
+  line-height: 1.45;
+  user-select: all;
+}
+
+.previewFrame {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+}
+
+.previewFrame img {
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.placeholder {
+  color: #888;
+  font-style: italic;
+  user-select: none;
 }
