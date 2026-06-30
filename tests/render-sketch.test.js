@@ -1,4 +1,4 @@
-const { describe, it, before } = require("node:test");
+const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
 const handler = require("../pages/api/render-sketch");
@@ -31,8 +31,8 @@ function callHandler(query = {}) {
   return res;
 }
 
-describe("render-sketch API", () => {
-  it("returns valid SVG with default parameters", () => {
+describe("render-sketch API (2D)", () => {
+  it("returns valid plan view SVG with defaults", () => {
     const res = callHandler();
     assert.equal(res.statusCode, 200);
     assert.equal(res.headers["content-type"], "image/svg+xml");
@@ -43,51 +43,67 @@ describe("render-sketch API", () => {
     assert.match(res.body, /^<svg[\s\S]*<\/svg>$/);
     assert.match(res.body, /Zoning Regulation/);
     assert.match(res.body, /16×16 plot/);
-    assert.match(res.body, /3 block setback/);
-    assert.match(res.body, /25 block max height/);
+    assert.match(res.body, /10×10 buildable/);
   });
 
-  it("honors custom query parameters", () => {
+  it("supports rectangular plots via width and depth", () => {
     const res = callHandler({
-      maxheight: "40",
+      width: "24",
+      depth: "12",
       setback: "2",
-      plotsize: "32",
-      title: "Downtown Zoning",
+      title: "Harbor Lot",
     });
     assert.equal(res.statusCode, 200);
-    assert.match(res.body, /Downtown Zoning/);
-    assert.match(res.body, /32×32 plot/);
-    assert.match(res.body, /28×28 buildable footprint/);
-    assert.match(res.body, /2 block setback/);
-    assert.match(res.body, /40 block max height/);
+    assert.match(res.body, /Harbor Lot/);
+    assert.match(res.body, /24×12 plot/);
+    assert.match(res.body, /20×8 buildable/);
   });
 
-  it("includes roughjs sketch paths in SVG output", () => {
-    const res = callHandler();
+  it("renders elevation view with over-limit block", () => {
+    const res = callHandler({
+      view: "elevation",
+      maxheight: "32",
+      showover: "1",
+      title: "Height Limit",
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /Height Limit/);
+    assert.match(res.body, /max 32 blocks/);
+    assert.match(res.body, /fill-opacity="0.5"/);
+    assert.match(res.body, /not allowed/);
+  });
+
+  it("renders material grid for rails pattern", () => {
+    const res = callHandler({
+      view: "grid",
+      rows: "xoxox|o-o-o",
+      title: "Rail Pattern",
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /Rail Pattern/);
+    assert.match(res.body, /wooden slab/);
+    assert.match(res.body, /polished deepslate/);
     assert.match(res.body, /<path[^>]+d="/);
   });
 
-  it("includes setback boundary and envelope wireframe strokes", () => {
-    const res = callHandler();
-    assert.match(res.body, /#c0392b/);
-    assert.match(res.body, /#2c3e50/);
+  it("accepts spaced grid rows", () => {
+    const res = callHandler({
+      rows: "x o x o x| - o - o -",
+      title: "Spaced Rails",
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /Spaced Rails/);
   });
 
   it("rejects invalid setback with 400", () => {
-    const res = callHandler({ plotsize: "10", setback: "6" });
+    const res = callHandler({ width: "10", depth: "10", setback: "6" });
     assert.equal(res.statusCode, 400);
-    assert.match(res.body, /setback must be less than half of plotsize/);
+    assert.match(res.body, /setback must be smaller than half of width and depth/);
   });
 
-  it("falls back to defaults for non-numeric params", () => {
-    const res = callHandler({
-      maxheight: "abc",
-      setback: "",
-      plotsize: "-5",
-      title: "   ",
-    });
-    assert.equal(res.statusCode, 200);
-    assert.match(res.body, /Zoning Regulation/);
-    assert.match(res.body, /25 block max height/);
+  it("requires rows for grid view", () => {
+    const res = callHandler({ view: "grid" });
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body, /requires rows or grid parameter/);
   });
 });

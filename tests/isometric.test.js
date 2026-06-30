@@ -3,15 +3,7 @@ const assert = require("node:assert/strict");
 const { JSDOM } = require("jsdom");
 const rough = require("roughjs");
 
-const ISO_X = Math.cos(Math.PI / 6);
-const ISO_Z = Math.sin(Math.PI / 6);
-
-function project(x, y, z, scale, offsetX, offsetY) {
-  return {
-    x: (x - z) * ISO_X * scale + offsetX,
-    y: (x + z) * ISO_Z * scale - y * scale + offsetY,
-  };
-}
+const { project } = require("../lib/sketch/render-3d");
 
 describe("isometric projection math", () => {
   it("maps origin to offset point", () => {
