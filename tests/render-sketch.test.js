@@ -101,6 +101,21 @@ describe("render-sketch API (2D)", () => {
     assert.match(res.body, /setback must be smaller than half of width and depth/);
   });
 
+  it("auto-sizes canvas so labels are not clipped", () => {
+    const res = callHandler({
+      view: "elevation",
+      maxheight: "32",
+      showover: "1",
+      title: "Very Long Regulation Title For Elevation View",
+    });
+    const width = Number(res.body.match(/width="(\d+)"/)?.[1]);
+    const viewBox = res.body.match(/viewBox="0 0 (\d+) (\d+)"/);
+    assert.ok(width >= 180);
+    assert.equal(viewBox?.[1], String(width));
+    assert.match(res.body, /translate\(/);
+    assert.match(res.body, /not allowed/);
+  });
+
   it("requires rows for grid view", () => {
     const res = callHandler({ view: "grid" });
     assert.equal(res.statusCode, 400);
