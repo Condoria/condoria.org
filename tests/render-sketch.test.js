@@ -1,7 +1,7 @@
 const { describe, it, before } = require("node:test");
 const assert = require("node:assert/strict");
 
-const handler = require("../api/render-sketch");
+const handler = require("../pages/api/render-sketch");
 
 function mockRes() {
   const res = {

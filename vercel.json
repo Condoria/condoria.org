@@ -1,14 +1,8 @@
 {
   "functions": {
-    "api/render-sketch.js": {
+    "pages/api/render-sketch.js": {
       "memory": 1024,
       "maxDuration": 10
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/render-sketch",
-      "destination": "/api/render-sketch.js"
-    }
-  ]
+  }
 }

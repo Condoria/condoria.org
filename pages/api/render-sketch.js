@@ -216,7 +216,7 @@ function generateSketch({ maxheight, setback, plotsize, title }) {
   return svg.outerHTML;
 }
 
-module.exports = (req, res) => {
+module.exports = function handler(req, res) {
   const maxheight = parseIntParam(req.query.maxheight, 25);
   const setback = parseIntParam(req.query.setback, 3);
   const plotsize = parseIntParam(req.query.plotsize, 16);
