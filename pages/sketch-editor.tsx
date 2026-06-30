@@ -93,13 +93,13 @@ function planCellZone(
   rows: number,
   cols: number,
   setback: number,
-): "setback" | "buildable" | null {
+): "setback" | null {
   if (setback <= 0) {
     return null;
   }
   const onEdge =
     row < setback || row >= rows - setback || col < setback || col >= cols - setback;
-  return onEdge ? "setback" : "buildable";
+  return onEdge ? "setback" : null;
 }
 
 export default function SketchEditorPage() {
@@ -394,7 +394,7 @@ export default function SketchEditorPage() {
     paintCellForce(row, col);
   };
 
-  const cellStyle = (char: CellChar, zone: "setback" | "buildable" | null): React.CSSProperties => {
+  const cellStyle = (char: CellChar, zone: "setback" | null): React.CSSProperties => {
     let base: React.CSSProperties;
     if (char === TRANSPARENT_CHAR) {
       base = {
@@ -419,13 +419,6 @@ export default function SketchEditorPage() {
         ...base,
         background: `linear-gradient(rgba(253, 236, 234, 0.72), rgba(253, 236, 234, 0.72)), ${base.background ?? "transparent"}`,
         boxShadow: `${base.boxShadow ?? ""}, inset 0 0 0 1px #e8b4b0`,
-      };
-    }
-    if (zone === "buildable") {
-      return {
-        ...base,
-        background: `linear-gradient(rgba(232, 244, 234, 0.55), rgba(232, 244, 234, 0.55)), ${base.background ?? "transparent"}`,
-        boxShadow: `${base.boxShadow ?? ""}, inset 0 0 0 1px #b8d4be`,
       };
     }
     return base;
