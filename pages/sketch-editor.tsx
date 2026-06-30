@@ -11,6 +11,7 @@ import {
   maxSetbackForPlot,
   validatePlanSetback,
 } from "@/lib/sketch/plan";
+import { useSketchPreview } from "@/lib/sketch/use-sketch-preview";
 import styles from "@/styles/sketch-editor.module.css";
 
 type CellChar = string;
@@ -86,6 +87,21 @@ function nextStyleKey(styleMap: CellStyleMap) {
   return "z";
 }
 
+function planCellZone(
+  row: number,
+  col: number,
+  rows: number,
+  cols: number,
+  setback: number,
+): "setback" | "buildable" | null {
+  if (setback <= 0) {
+    return null;
+  }
+  const onEdge =
+    row < setback || row >= rows - setback || col < setback || col >= cols - setback;
+  return onEdge ? "setback" : "buildable";
+}
+
 export default function SketchEditorPage() {
   const [title, setTitle] = useState("Rail Pattern");
   const [subtitle, setSubtitle] = useState("");
@@ -98,14 +114,9 @@ export default function SketchEditorPage() {
   const [rowsText, setRowsText] = useState("ababa\n-b-b-");
   const [planEnabled, setPlanEnabled] = useState(false);
   const [elevationEnabled, setElevationEnabled] = useState(false);
-  const [width, setWidth] = useState(16);
-  const [depth, setDepth] = useState(16);
-  const [setback, setSetback] = useState(3);
+  const [setback, setSetback] = useState(1);
   const [maxheight, setMaxheight] = useState(25);
-  const [showover, setShowover] = useState(true);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewKey, setPreviewKey] = useState(0);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingBrush, setEditingBrush] = useState<string | null>(null);
   const paintRef = useRef(false);
@@ -115,10 +126,13 @@ export default function SketchEditorPage() {
 
   const gridRows = grid.length;
   const gridCols = grid[0]?.length ?? 1;
+  const plotWidth = gridCols;
+  const plotDepth = gridRows;
+  const maxSetback = maxSetbackForPlot(plotWidth, plotDepth);
 
   const effectivePlan = useMemo(
-    () => getEffectivePlanSize(width, depth, gridCols, gridRows),
-    [width, depth, gridCols, gridRows],
+    () => getEffectivePlanSize(plotWidth, plotDepth, gridCols, gridRows),
+    [plotWidth, plotDepth, gridCols, gridRows],
   );
 
   const planError = useMemo(() => {
@@ -128,14 +142,12 @@ export default function SketchEditorPage() {
     return validatePlanSetback(setback, effectivePlan.width, effectivePlan.depth);
   }, [planEnabled, setback, effectivePlan.width, effectivePlan.depth]);
 
-  const planClipped =
-    planEnabled && (width > gridCols || depth > gridRows);
-
   useEffect(() => {
-    if (!planError) {
-      setPreviewError(null);
+    if (!planEnabled) {
+      return;
     }
-  }, [planError]);
+    setSetback((current) => Math.min(current, maxSetbackForPlot(gridCols, gridRows)));
+  }, [planEnabled, gridCols, gridRows]);
 
   const draftUrl = useMemo(
     () =>
@@ -145,12 +157,12 @@ export default function SketchEditorPage() {
         grid,
         styleMap,
         planEnabled,
-        width,
-        depth,
+        width: plotWidth,
+        depth: plotDepth,
         setback,
         maxheight,
         elevationEnabled,
-        showover,
+        showover: true,
       }),
     [
       title,
@@ -158,14 +170,17 @@ export default function SketchEditorPage() {
       grid,
       styleMap,
       planEnabled,
-      width,
-      depth,
+      plotWidth,
+      plotDepth,
       setback,
       maxheight,
       elevationEnabled,
-      showover,
     ],
   );
+
+  const previewEnabled = !planError;
+  const preview = useSketchPreview(draftUrl, previewEnabled);
+  const elevationDisplayRows = elevationEnabled ? maxheight + 1 : 0;
 
   const syncRowsTextFromGrid = useCallback((nextGrid: CellChar[][]) => {
     setRowsText(gridToRowsText(nextGrid));
@@ -324,44 +339,17 @@ export default function SketchEditorPage() {
     return () => window.removeEventListener("mouseup", stopPainting);
   }, [toggleCell]);
 
-  const handleGenerate = async () => {
-    setCopied(false);
-    if (planError) {
-      setPreviewError(planError);
-      setPreviewUrl(null);
+  const handleCopy = async () => {
+    if (preview.status !== "ready") {
       return;
     }
-
-    try {
-      const res = await fetch(draftUrl);
-      if (!res.ok) {
-        const message = (await res.text()).trim() || "Failed to render sketch";
-        setPreviewError(message);
-        setPreviewUrl(null);
-        return;
-      }
-      setPreviewError(null);
-      setPreviewUrl(draftUrl);
-      setPreviewKey((k) => k + 1);
-    } catch {
-      setPreviewError("Could not reach the render API.");
-      setPreviewUrl(null);
-    }
-  };
-
-  const handlePlanToggle = (enabled: boolean) => {
-    setPlanEnabled(enabled);
-    if (enabled) {
-      setWidth(gridCols);
-      setDepth(gridRows);
-      setSetback((current) => Math.min(current, maxSetbackForPlot(gridCols, gridRows)));
-    }
-  };
-
-  const handleCopy = async () => {
     const absolute = typeof window !== "undefined" ? `${window.location.origin}${draftUrl}` : draftUrl;
     await navigator.clipboard.writeText(absolute);
     setCopied(true);
+  };
+
+  const handleSetbackChange = (next: number) => {
+    setSetback(Math.max(0, Math.min(maxSetback, next)));
   };
 
   const beginPaint = (e: React.MouseEvent, row: number, col: number) => {
@@ -406,22 +394,41 @@ export default function SketchEditorPage() {
     paintCellForce(row, col);
   };
 
-  const cellStyle = (char: CellChar): React.CSSProperties => {
+  const cellStyle = (char: CellChar, zone: "setback" | "buildable" | null): React.CSSProperties => {
+    let base: React.CSSProperties;
     if (char === TRANSPARENT_CHAR) {
-      return {
+      base = {
         background: "transparent",
         boxShadow: "inset 0 0 0 1px #d8d0c4",
       };
+    } else {
+      const style = styleMap[char];
+      if (!style) {
+        base = { background: "#fff", boxShadow: "inset 0 0 0 1px #ccc" };
+      } else {
+        base = {
+          background: style.fill,
+          boxShadow: `inset 0 0 0 2px ${style.stroke}`,
+          opacity: style.opacity,
+        };
+      }
     }
-    const style = styleMap[char];
-    if (!style) {
-      return { background: "#fff", boxShadow: "inset 0 0 0 1px #ccc" };
+
+    if (zone === "setback") {
+      return {
+        ...base,
+        background: `linear-gradient(rgba(253, 236, 234, 0.72), rgba(253, 236, 234, 0.72)), ${base.background ?? "transparent"}`,
+        boxShadow: `${base.boxShadow ?? ""}, inset 0 0 0 1px #e8b4b0`,
+      };
     }
-    return {
-      background: style.fill,
-      boxShadow: `inset 0 0 0 2px ${style.stroke}`,
-      opacity: style.opacity,
-    };
+    if (zone === "buildable") {
+      return {
+        ...base,
+        background: `linear-gradient(rgba(232, 244, 234, 0.55), rgba(232, 244, 234, 0.55)), ${base.background ?? "transparent"}`,
+        boxShadow: `${base.boxShadow ?? ""}, inset 0 0 0 1px #b8d4be`,
+      };
+    }
+    return base;
   };
 
   const activeBrushStyle = brush === TRANSPARENT_CHAR ? null : styleMap[brush] ?? null;
@@ -474,7 +481,7 @@ export default function SketchEditorPage() {
                 </div>
                 <div className={styles.row2}>
                   <div className={styles.fieldCompact}>
-                    <label htmlFor="grid-rows">Rows</label>
+                    <label htmlFor="grid-rows">Rows (blocks)</label>
                     <input
                       id="grid-rows"
                       type="number"
@@ -484,7 +491,7 @@ export default function SketchEditorPage() {
                     />
                   </div>
                   <div className={styles.fieldCompact}>
-                    <label htmlFor="grid-cols">Columns</label>
+                    <label htmlFor="grid-cols">Columns (blocks)</label>
                     <input
                       id="grid-cols"
                       type="number"
@@ -496,6 +503,63 @@ export default function SketchEditorPage() {
                 </div>
               </div>
 
+              <div className={styles.regulationBar}>
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={planEnabled}
+                    onChange={(e) => setPlanEnabled(e.target.checked)}
+                  />
+                  Plot limits
+                </label>
+                {planEnabled && (
+                  <div className={styles.setbackControl}>
+                    <label htmlFor="setback-slider">
+                      Setback <span className={styles.setbackValue}>{setback} blk</span>
+                    </label>
+                    <input
+                      id="setback-slider"
+                      type="range"
+                      min={0}
+                      max={maxSetback}
+                      value={Math.min(setback, maxSetback)}
+                      onChange={(e) => handleSetbackChange(Number(e.target.value))}
+                      disabled={maxSetback === 0}
+                    />
+                  </div>
+                )}
+                <label className={styles.checkbox}>
+                  <input
+                    type="checkbox"
+                    checked={elevationEnabled}
+                    onChange={(e) => setElevationEnabled(e.target.checked)}
+                  />
+                  Height ruler
+                </label>
+                {(planEnabled || elevationEnabled) && (
+                  <div className={styles.fieldCompact}>
+                    <label htmlFor="max-height">Max height</label>
+                    <input
+                      id="max-height"
+                      type="number"
+                      min={1}
+                      max={64}
+                      value={maxheight}
+                      onChange={(e) => setMaxheight(Number(e.target.value) || 1)}
+                    />
+                  </div>
+                )}
+              </div>
+              {planEnabled && (
+                <p className={styles.regulationSummary}>
+                  {plotWidth}×{plotDepth} plot
+                  {setback > 0
+                    ? ` · ${Math.max(0, plotWidth - setback * 2)}×${Math.max(0, plotDepth - setback * 2)} buildable`
+                    : ""}
+                  {elevationEnabled ? ` · height ${maxheight}` : ""}
+                </p>
+              )}
+
               <div
                 className={styles.paintCanvas}
                 onMouseLeave={() => {
@@ -505,26 +569,52 @@ export default function SketchEditorPage() {
                 onDragStart={(e) => e.preventDefault()}
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <div
-                  className={styles.gridEditor}
-                  style={{ gridTemplateColumns: `repeat(${gridCols}, 32px)` }}
-                  role="presentation"
-                >
-                  {grid.map((row, r) =>
-                    row.map((char, c) => (
+                <div className={styles.sketchViewport}>
+                  <div
+                    className={styles.gridEditor}
+                    style={{ gridTemplateColumns: `repeat(${gridCols}, 32px)` }}
+                    role="presentation"
+                  >
+                    {grid.map((row, r) =>
+                      row.map((char, c) => {
+                        const zone = planEnabled
+                          ? planCellZone(r, c, gridRows, gridCols, setback)
+                          : null;
+                        return (
+                          <div
+                            key={`${r}-${c}`}
+                            className={styles.gridCell}
+                            style={cellStyle(char, zone)}
+                            onMouseDown={(e) => beginPaint(e, r, c)}
+                            onMouseEnter={() => continuePaint(r, c)}
+                            aria-label={
+                              char === TRANSPARENT_CHAR
+                                ? `empty cell ${r + 1},${c + 1}`
+                                : `${styleMap[char]?.label ?? char} ${r + 1},${c + 1}`
+                            }
+                          />
+                        );
+                      }),
+                    )}
+                  </div>
+                  {elevationEnabled && (
+                    <div className={styles.elevationRail} aria-label={`Height ruler, max ${maxheight} blocks`}>
+                      <span className={styles.elevationLabel}>height</span>
                       <div
-                        key={`${r}-${c}`}
-                        className={styles.gridCell}
-                        style={cellStyle(char)}
-                        onMouseDown={(e) => beginPaint(e, r, c)}
-                        onMouseEnter={() => continuePaint(r, c)}
-                        aria-label={
-                          char === TRANSPARENT_CHAR
-                            ? `empty cell ${r + 1},${c + 1}`
-                            : `${styleMap[char]?.label ?? char} ${r + 1},${c + 1}`
-                        }
-                      />
-                    )),
+                        className={styles.elevationStack}
+                        style={{ gridTemplateRows: `repeat(${elevationDisplayRows}, 10px)` }}
+                      >
+                        <div className={styles.elevationCellOver} title="Not allowed above max height" />
+                        {Array.from({ length: maxheight }, (_, i) => (
+                          <div
+                            key={maxheight - i}
+                            className={styles.elevationCell}
+                            title={`Block ${maxheight - i}`}
+                          />
+                        ))}
+                      </div>
+                      <span className={styles.elevationMaxLabel}>max {maxheight}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -587,7 +677,10 @@ export default function SketchEditorPage() {
           </div>
 
           <section className={`${styles.panel} ${styles.outputPanel}`}>
-            <h2>Generate &amp; preview</h2>
+            <h2>Export preview</h2>
+            <p className={styles.fieldHint}>
+              Preview updates automatically. One canvas cell equals one Minecraft block.
+            </p>
 
             <div className={styles.row2}>
               <div className={styles.field}>
@@ -600,145 +693,80 @@ export default function SketchEditorPage() {
               </div>
             </div>
 
-            <div className={styles.field}>
-              <label htmlFor="rows-text">Rows text (top line = top row)</label>
-              <textarea
-                id="rows-text"
-                value={rowsText}
-                onChange={(e) => setRowsText(e.target.value)}
-                placeholder={"ababa\n-b-b-"}
-              />
-              <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
-                Apply rows text
-              </button>
-            </div>
-
-            <div className={styles.featuresRow}>
-              <div className={styles.featureGroup}>
-                <label className={styles.checkbox}>
-                  <input
-                    type="checkbox"
-                    checked={planEnabled}
-                    onChange={(e) => handlePlanToggle(e.target.checked)}
-                  />
-                  Plan overlay
-                </label>
-                {planEnabled && (
-                  <div className={styles.featureBlock}>
-                    <p className={styles.fieldHint}>
-                      Plot size is in Minecraft blocks (not grid rows/columns). The overlay is drawn on
-                      your canvas and clipped to {gridCols}×{gridRows} cells — effective area{" "}
-                      {effectivePlan.width}×{effectivePlan.depth} blocks.
-                    </p>
-                    {planClipped && (
-                      <p className={styles.fieldWarning}>
-                        Plot is larger than the canvas; only the top-left {effectivePlan.width}×
-                        {effectivePlan.depth} cells show the overlay.
-                      </p>
-                    )}
-                    <div className={styles.row2}>
-                      <div className={styles.field}>
-                        <label htmlFor="plan-width">Plot width (blocks)</label>
-                        <input
-                          id="plan-width"
-                          type="number"
-                          min={1}
-                          value={width}
-                          onChange={(e) => setWidth(Number(e.target.value) || 1)}
-                        />
-                      </div>
-                      <div className={styles.field}>
-                        <label htmlFor="plan-depth">Plot depth (blocks)</label>
-                        <input
-                          id="plan-depth"
-                          type="number"
-                          min={1}
-                          value={depth}
-                          onChange={(e) => setDepth(Number(e.target.value) || 1)}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.row2}>
-                      <div className={styles.field}>
-                        <label htmlFor="plan-setback">Setback (blocks from each edge)</label>
-                        <input
-                          id="plan-setback"
-                          type="number"
-                          min={0}
-                          max={maxSetbackForPlot(effectivePlan.width, effectivePlan.depth)}
-                          value={setback}
-                          onChange={(e) => setSetback(Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className={styles.field}>
-                        <label htmlFor="plan-maxheight">Max height label</label>
-                        <input
-                          id="plan-maxheight"
-                          type="number"
-                          min={1}
-                          value={maxheight}
-                          onChange={(e) => setMaxheight(Number(e.target.value) || 1)}
-                        />
-                      </div>
-                    </div>
-                    {planError && <p className={styles.fieldError}>{planError}</p>}
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.featureGroup}>
-                <label className={styles.checkbox}>
-                  <input
-                    type="checkbox"
-                    checked={elevationEnabled}
-                    onChange={(e) => setElevationEnabled(e.target.checked)}
-                  />
-                  Elevation column
-                </label>
-                {elevationEnabled && (
-                  <div className={styles.featureBlock}>
-                    <div className={styles.field}>
-                      <label>Max height</label>
-                      <input type="number" min={1} value={maxheight} onChange={(e) => setMaxheight(Number(e.target.value) || 1)} />
-                    </div>
-                    <label className={styles.checkbox}>
-                      <input type="checkbox" checked={showover} onChange={(e) => setShowover(e.target.checked)} />
-                      Over-limit block (red, 50%)
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div className={styles.actions}>
               <button
                 type="button"
-                className={styles.button}
-                onClick={handleGenerate}
-                disabled={Boolean(planError)}
+                className={styles.buttonSecondary}
+                onClick={handleCopy}
+                disabled={preview.status !== "ready"}
               >
-                Generate
-              </button>
-              <button type="button" className={styles.buttonSecondary} onClick={handleCopy}>
                 {copied ? "Copied!" : "Copy URL"}
               </button>
+              <span className={styles.previewStatus} data-status={preview.status}>
+                {preview.status === "loading" && "Updating preview…"}
+                {preview.status === "ready" && "Preview ready"}
+                {preview.status === "error" && "Preview failed"}
+                {preview.status === "idle" && "Waiting for valid settings"}
+              </span>
             </div>
 
             <div className={styles.urlBox}>{draftUrl}</div>
-            {previewError && <p className={styles.previewError}>{previewError}</p>}
+
             <div className={styles.previewFrame}>
-              {previewUrl ? (
+              {planError ? (
+                <div className={styles.previewErrorCard} role="alert">
+                  <strong>Cannot render</strong>
+                  <p>{planError}</p>
+                </div>
+              ) : preview.status === "error" ? (
+                <div className={styles.previewErrorCard} role="alert">
+                  <strong>Render failed</strong>
+                  <p>{preview.error}</p>
+                </div>
+              ) : preview.status === "loading" && preview.blobUrl ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview.blobUrl}
+                    alt=""
+                    className={styles.previewDimmed}
+                    draggable={false}
+                    aria-hidden
+                  />
+                  <span className={styles.previewLoading}>Updating…</span>
+                </>
+              ) : preview.status === "loading" ? (
+                <span className={styles.placeholder}>Rendering preview…</span>
+              ) : preview.blobUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={previewKey}
-                  src={`${previewUrl}&_=${previewKey}`}
-                  alt="Generated sketch"
-                  draggable={false}
-                />
+                <img src={preview.blobUrl} alt="Generated sketch" draggable={false} />
               ) : (
-                <span className={styles.placeholder}>Click Generate to render the API result</span>
+                <span className={styles.placeholder}>Preview appears here</span>
               )}
             </div>
+
+            <button
+              type="button"
+              className={styles.advancedToggle}
+              onClick={() => setShowAdvanced((open) => !open)}
+              aria-expanded={showAdvanced}
+            >
+              {showAdvanced ? "Hide" : "Show"} advanced · rows text import
+            </button>
+            {showAdvanced && (
+              <div className={styles.field}>
+                <label htmlFor="rows-text">Rows text (top line = top row)</label>
+                <textarea
+                  id="rows-text"
+                  value={rowsText}
+                  onChange={(e) => setRowsText(e.target.value)}
+                  placeholder={"ababa\n-b-b-"}
+                />
+                <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
+                  Apply rows text
+                </button>
+              </div>
+            )}
           </section>
         </div>
 
