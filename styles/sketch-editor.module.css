@@ -24,7 +24,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(280px, 380px) 1fr;
+  grid-template-columns: minmax(320px, 440px) 1fr;
   gap: 1.5rem;
   align-items: start;
 }
@@ -288,5 +288,96 @@
 .hint {
   font-size: 0.8rem;
   color: #777;
-  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.sectionGap {
+  margin-top: 1.25rem;
+}
+
+.brushRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.brush,
+.brushActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #cfc7ba;
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: #fff;
+}
+
+.brushActive {
+  outline: 2px solid #2c3e50;
+}
+
+.brushSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid #444;
+}
+
+.brushSwatchEraser {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px dashed #999;
+  background: repeating-linear-gradient(45deg, #f5f5f5, #f5f5f5 4px, #fff 4px, #fff 8px);
+}
+
+.styleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.styleCard {
+  border: 1px solid #ddd5c8;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.styleCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.linkButton {
+  border: none;
+  background: none;
+  color: #c0392b;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.featureBlock {
+  margin: 0 0 0.75rem 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid #ddd5c8;
+}
+
+.gridCellBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: crosshair;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }

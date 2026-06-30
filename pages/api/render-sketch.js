@@ -1,38 +1,45 @@
 const { createApiHandler } = require("../../lib/sketch/handler");
-const { renderPlan, renderElevation, renderGrid } = require("../../lib/sketch/render-2d");
+const { renderSketch } = require("../../lib/sketch/render-2d");
+const { parseStylesParam } = require("../../lib/sketch/style-codec");
 const {
-  parseIntParam,
-  parseBoolParam,
   parseTitle,
-  parseView,
-  parsePlotDimensions,
+  parsePlanFeature,
+  parseElevationFeature,
   parseGridRows,
+  buildEmptyGrid,
 } = require("../../lib/sketch/parse");
 
 function renderFromQuery(query) {
-  const view = parseView(query);
   const title = parseTitle(query.title, "Zoning Regulation");
+  const subtitle = typeof query.subtitle === "string" ? query.subtitle.trim() : "";
+  const styles = parseStylesParam(query.styles);
+  const plan = parsePlanFeature(query);
+  const elevation = parseElevationFeature(query);
 
-  if (view === "grid") {
-    const rows = parseGridRows(query);
-    if (!rows) {
-      throw new Error("grid view requires rows or grid parameter");
+  let rows = parseGridRows(query);
+  if (!rows) {
+    if (plan.enabled) {
+      rows = buildEmptyGrid(plan.width, plan.depth);
+    } else {
+      throw new Error("rows or grid parameter is required");
     }
-    const subtitle = typeof query.subtitle === "string" ? query.subtitle.trim() : "";
-    return renderGrid({ rows, title, subtitle: subtitle || undefined });
   }
 
-  if (view === "elevation") {
-    const maxheight = parseIntParam(query.maxheight, 25);
-    const showOverLimit = parseBoolParam(query.showover, true);
-    const columns = parseIntParam(query.columns, 1, 1);
-    return renderElevation({ maxheight, showOverLimit, title, columns });
+  if (plan.enabled && plan.setback * 2 >= plan.width) {
+    throw new Error("setback must be smaller than half of width and depth");
+  }
+  if (plan.enabled && plan.setback * 2 >= plan.depth) {
+    throw new Error("setback must be smaller than half of width and depth");
   }
 
-  const { width, depth } = parsePlotDimensions(query);
-  const setback = parseIntParam(query.setback, 3);
-  const maxheight = parseIntParam(query.maxheight, 25);
-  return renderPlan({ width, depth, setback, maxheight, title });
+  return renderSketch({
+    rows,
+    title,
+    subtitle: subtitle || undefined,
+    styles,
+    plan: plan.enabled ? plan : undefined,
+    elevation: elevation.enabled ? elevation : undefined,
+  });
 }
 
 const handler = createApiHandler(renderFromQuery);

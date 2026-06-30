@@ -1,160 +1,216 @@
 import Head from "next/head";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  DEFAULT_STYLES,
+  TRANSPARENT_CHAR,
+  serializeStylesParam,
+  type CellStyleMap,
+} from "@/lib/sketch/editor-types";
 import styles from "@/styles/sketch-editor.module.css";
 
-type ViewType = "plan" | "elevation" | "grid";
-type GridSymbol = "x" | "o" | "-" | ".";
+type CellChar = string;
 
-const SYMBOL_CYCLE: GridSymbol[] = [".", "x", "o", "-"];
-const SYMBOL_META: Record<GridSymbol, { label: string; className: string }> = {
-  ".": { label: "empty", className: styles.gridCellEmpty },
-  x: { label: "wooden slab", className: styles.gridCellWood },
-  o: { label: "polished deepslate", className: styles.gridCellStone },
-  "-": { label: "rail gap", className: styles.gridCellGap },
-};
-
-function createEmptyGrid(rows: number, cols: number, fill: GridSymbol = ".") {
+function createEmptyGrid(rows: number, cols: number, fill: CellChar = TRANSPARENT_CHAR) {
   return Array.from({ length: rows }, () => Array.from({ length: cols }, () => fill));
 }
 
-function parseRowsText(text: string, cols: number): GridSymbol[][] {
+function gridToRowsText(grid: CellChar[][]) {
+  return grid.map((row) => row.join("")).join("\n");
+}
+
+function parseRowsText(text: string): CellChar[][] {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, ""))
     .filter(Boolean);
   if (lines.length === 0) {
-    return createEmptyGrid(2, cols);
+    return createEmptyGrid(2, 5);
   }
-  const width = Math.max(cols, ...lines.map((line) => line.length));
-  return lines.map((line) =>
-    line
-      .padEnd(width, ".")
-      .split("")
-      .map((ch) => (ch in SYMBOL_META ? (ch as GridSymbol) : ".")),
-  );
+  const cols = Math.max(...lines.map((line) => line.length));
+  return lines.map((line) => line.padEnd(cols, TRANSPARENT_CHAR).split(""));
 }
 
-function gridToRowsParam(grid: GridSymbol[][]) {
+function gridToRowsParam(grid: CellChar[][]) {
   return grid.map((row) => row.join("")).join("|");
 }
 
-function buildSketchUrl(
-  view: ViewType,
-  params: {
-    title: string;
-    subtitle: string;
-    width: number;
-    depth: number;
-    setback: number;
-    maxheight: number;
-    showover: boolean;
-    columns: number;
-    grid: GridSymbol[][];
-  },
-) {
+function buildSketchUrl(params: {
+  title: string;
+  subtitle: string;
+  grid: CellChar[][];
+  styleMap: CellStyleMap;
+  planEnabled: boolean;
+  width: number;
+  depth: number;
+  setback: number;
+  maxheight: number;
+  elevationEnabled: boolean;
+  showover: boolean;
+}) {
   const search = new URLSearchParams();
-  if (view !== "plan") {
-    search.set("view", view);
-  }
   search.set("title", params.title || "Zoning Regulation");
+  search.set("rows", gridToRowsParam(params.grid));
+  search.set("styles", serializeStylesParam(params.styleMap));
 
-  if (view === "plan") {
+  if (params.subtitle.trim()) {
+    search.set("subtitle", params.subtitle.trim());
+  }
+  if (params.planEnabled) {
+    search.set("plan", "1");
     search.set("width", String(params.width));
     search.set("depth", String(params.depth));
     search.set("setback", String(params.setback));
     search.set("maxheight", String(params.maxheight));
-  } else if (view === "elevation") {
+  }
+  if (params.elevationEnabled) {
+    search.set("elevation", "1");
     search.set("maxheight", String(params.maxheight));
     search.set("showover", params.showover ? "1" : "0");
-    if (params.columns > 1) {
-      search.set("columns", String(params.columns));
-    }
-  } else {
-    search.set("rows", gridToRowsParam(params.grid));
-    if (params.subtitle.trim()) {
-      search.set("subtitle", params.subtitle.trim());
-    }
   }
 
   return `/api/render-sketch?${search.toString()}`;
 }
 
+function nextStyleKey(styleMap: CellStyleMap) {
+  for (let code = 97; code <= 122; code++) {
+    const key = String.fromCharCode(code);
+    if (!styleMap[key]) {
+      return key;
+    }
+  }
+  return "z";
+}
+
 export default function SketchEditorPage() {
-  const [view, setView] = useState<ViewType>("plan");
-  const [title, setTitle] = useState("Zoning Regulation");
+  const [title, setTitle] = useState("Rail Pattern");
   const [subtitle, setSubtitle] = useState("");
+  const [styleMap, setStyleMap] = useState<CellStyleMap>(() => ({ ...DEFAULT_STYLES }));
+  const [brush, setBrush] = useState<CellChar>("a");
+  const [grid, setGrid] = useState<CellChar[][]>(() => [
+    ["a", "b", "a", "b", "a"],
+    [TRANSPARENT_CHAR, "b", TRANSPARENT_CHAR, "b", TRANSPARENT_CHAR],
+  ]);
+  const [rowsText, setRowsText] = useState("ababa\n-b-b-");
+  const [planEnabled, setPlanEnabled] = useState(false);
+  const [elevationEnabled, setElevationEnabled] = useState(false);
   const [width, setWidth] = useState(16);
   const [depth, setDepth] = useState(16);
   const [setback, setSetback] = useState(3);
   const [maxheight, setMaxheight] = useState(25);
   const [showover, setShowover] = useState(true);
-  const [columns, setColumns] = useState(1);
-  const [gridCols, setGridCols] = useState(5);
-  const [gridRows, setGridRows] = useState(2);
-  const [grid, setGrid] = useState<GridSymbol[][]>(() => [
-    ["x", "o", "x", "o", "x"],
-    ["-", "o", "-", "o", "-"],
-  ]);
-  const [rowsText, setRowsText] = useState("xoxox\n-o-o-");
-  const [brush, setBrush] = useState<GridSymbol>("x");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [isPainting, setIsPainting] = useState(false);
+  const paintRef = useRef(false);
 
-  const params = useMemo(
-    () => ({
+  const gridRows = grid.length;
+  const gridCols = grid[0]?.length ?? 1;
+
+  const draftUrl = useMemo(
+    () =>
+      buildSketchUrl({
+        title,
+        subtitle,
+        grid,
+        styleMap,
+        planEnabled,
+        width,
+        depth,
+        setback,
+        maxheight,
+        elevationEnabled,
+        showover,
+      }),
+    [
       title,
       subtitle,
+      grid,
+      styleMap,
+      planEnabled,
       width,
       depth,
       setback,
       maxheight,
+      elevationEnabled,
       showover,
-      columns,
-      grid,
-    }),
-    [title, subtitle, width, depth, setback, maxheight, showover, columns, grid],
+    ],
   );
 
-  const draftUrl = useMemo(() => buildSketchUrl(view, params), [view, params]);
-
-  const resizeGrid = useCallback((rows: number, cols: number) => {
-    setGridRows(rows);
-    setGridCols(cols);
-    setGrid((prev) => {
-      const next = createEmptyGrid(rows, cols);
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          next[r][c] = prev[r]?.[c] ?? ".";
-        }
-      }
-      return next;
-    });
+  const syncRowsTextFromGrid = useCallback((nextGrid: CellChar[][]) => {
+    setRowsText(gridToRowsText(nextGrid));
   }, []);
 
-  const applyRowsText = useCallback(() => {
-    const parsed = parseRowsText(rowsText, gridCols);
-    setGrid(parsed);
-    setGridRows(parsed.length);
-    setGridCols(parsed[0]?.length ?? gridCols);
-  }, [rowsText, gridCols]);
+  const resizeGrid = useCallback(
+    (rows: number, cols: number) => {
+      setGrid((prev) => {
+        const next = createEmptyGrid(rows, cols);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            next[r][c] = prev[r]?.[c] ?? TRANSPARENT_CHAR;
+          }
+        }
+        syncRowsTextFromGrid(next);
+        return next;
+      });
+    },
+    [syncRowsTextFromGrid],
+  );
 
   const paintCell = useCallback((row: number, col: number) => {
     setGrid((prev) => {
+      if (prev[row][col] === brush) {
+        return prev;
+      }
       const next = prev.map((r) => [...r]);
       next[row][col] = brush;
+      syncRowsTextFromGrid(next);
       return next;
     });
-  }, [brush]);
+  }, [brush, syncRowsTextFromGrid]);
 
-  const cycleCell = useCallback((row: number, col: number) => {
-    setGrid((prev) => {
-      const next = prev.map((r) => [...r]);
-      const current = next[row][col];
-      const idx = SYMBOL_CYCLE.indexOf(current);
-      next[row][col] = SYMBOL_CYCLE[(idx + 1) % SYMBOL_CYCLE.length];
+  const applyRowsText = useCallback(() => {
+    const parsed = parseRowsText(rowsText);
+    setGrid(parsed);
+  }, [rowsText]);
+
+  const updateStyle = useCallback((key: string, patch: Partial<CellStyleMap[string]>) => {
+    setStyleMap((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], ...patch },
+    }));
+  }, []);
+
+  const addStyle = useCallback(() => {
+    const key = nextStyleKey(styleMap);
+    setStyleMap((prev) => ({
+      ...prev,
+      [key]: {
+        fill: "#7c9ab8",
+        stroke: "#4a6278",
+        opacity: 1,
+        label: `style ${key}`,
+      },
+    }));
+    setBrush(key);
+  }, [styleMap]);
+
+  const removeStyle = useCallback((key: string) => {
+    setStyleMap((prev) => {
+      const next = { ...prev };
+      delete next[key];
       return next;
     });
+    setBrush((current) => (current === key ? TRANSPARENT_CHAR : current));
+  }, []);
+
+  useEffect(() => {
+    const stopPainting = () => {
+      paintRef.current = false;
+      setIsPainting(false);
+    };
+    window.addEventListener("mouseup", stopPainting);
+    return () => window.removeEventListener("mouseup", stopPainting);
   }, []);
 
   const handlePreview = () => {
@@ -169,6 +225,26 @@ export default function SketchEditorPage() {
     setCopied(true);
   };
 
+  const cellStyle = (char: CellChar) => {
+    if (char === TRANSPARENT_CHAR) {
+      return {
+        background: "transparent",
+        border: "1px dashed #ccc",
+        color: "#aaa",
+      };
+    }
+    const style = styleMap[char];
+    if (!style) {
+      return { background: "#fff", border: "1px solid #ccc", color: "#999" };
+    }
+    return {
+      background: style.fill,
+      border: `2px solid ${style.stroke}`,
+      color: "#fff",
+      opacity: style.opacity,
+    };
+  };
+
   return (
     <>
       <Head>
@@ -178,199 +254,233 @@ export default function SketchEditorPage() {
         <header className={styles.header}>
           <h1>Zoning Sketch Editor</h1>
           <p>
-            Design plan grids, height limits, or material patterns client-side. Preview renders the
-            live API URL you can embed in docs or regulations.
+            Paint a grid with custom styles, optional plan setback overlay, and optional height
+            column. Top row in the text input matches the top row in the preview.
           </p>
         </header>
 
         <div className={styles.layout}>
           <section className={styles.panel}>
-            <h2>Design</h2>
+            <h2>Styles &amp; brush</h2>
 
-            <div className={styles.viewTabs}>
-              {(["plan", "elevation", "grid"] as ViewType[]).map((v) => (
-                <button
-                  key={v}
-                  type="button"
-                  className={view === v ? styles.viewTabActive : styles.viewTab}
-                  onClick={() => setView(v)}
-                >
-                  {v}
-                </button>
-              ))}
+            <div className={styles.brushRow}>
+              <button
+                type="button"
+                className={brush === TRANSPARENT_CHAR ? styles.brushActive : styles.brush}
+                onClick={() => setBrush(TRANSPARENT_CHAR)}
+                title="Transparent eraser"
+              >
+                <span className={styles.brushSwatchEraser} />
+                {TRANSPARENT_CHAR} eraser
+              </button>
+              {Object.entries(styleMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, style]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={brush === key ? styles.brushActive : styles.brush}
+                    onClick={() => setBrush(key)}
+                    title={style.label}
+                  >
+                    <span
+                      className={styles.brushSwatch}
+                      style={{ background: style.fill, borderColor: style.stroke, opacity: style.opacity }}
+                    />
+                    {key}
+                  </button>
+                ))}
             </div>
 
+            <div className={styles.styleList}>
+              {Object.entries(styleMap)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, style]) => (
+                  <div key={key} className={styles.styleCard}>
+                    <div className={styles.styleCardHeader}>
+                      <strong>{key}</strong>
+                      <button type="button" className={styles.linkButton} onClick={() => removeStyle(key)}>
+                        remove
+                      </button>
+                    </div>
+                    <div className={styles.row2}>
+                      <div className={styles.field}>
+                        <label>Fill</label>
+                        <input
+                          type="color"
+                          value={style.fill}
+                          onChange={(e) => updateStyle(key, { fill: e.target.value })}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label>Border</label>
+                        <input
+                          type="color"
+                          value={style.stroke}
+                          onChange={(e) => updateStyle(key, { stroke: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label>Opacity ({style.opacity})</label>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={style.opacity}
+                        onChange={(e) => updateStyle(key, { opacity: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label>Legend label</label>
+                      <input
+                        value={style.label}
+                        onChange={(e) => updateStyle(key, { label: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <button type="button" className={styles.buttonSecondary} onClick={addStyle}>
+              + Add style
+            </button>
+
+            <h2 className={styles.sectionGap}>Grid</h2>
             <div className={styles.field}>
               <label htmlFor="title">Title</label>
               <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
+            <div className={styles.field}>
+              <label htmlFor="subtitle">Subtitle (optional)</label>
+              <input id="subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} />
+            </div>
 
-            {view === "plan" && (
-              <>
+            <div className={styles.row2}>
+              <div className={styles.field}>
+                <label htmlFor="grid-rows">Rows</label>
+                <input
+                  id="grid-rows"
+                  type="number"
+                  min={1}
+                  value={gridRows}
+                  onChange={(e) => resizeGrid(Number(e.target.value) || 1, gridCols)}
+                />
+              </div>
+              <div className={styles.field}>
+                <label htmlFor="grid-cols">Columns</label>
+                <input
+                  id="grid-cols"
+                  type="number"
+                  min={1}
+                  value={gridCols}
+                  onChange={(e) => resizeGrid(gridRows, Number(e.target.value) || 1)}
+                />
+              </div>
+            </div>
+
+            <p className={styles.hint}>Paint with the brush — click or drag across cells.</p>
+            <div
+              className={styles.gridEditor}
+              style={{ gridTemplateColumns: `repeat(${gridCols}, 30px)` }}
+              onMouseLeave={() => {
+                paintRef.current = false;
+                setIsPainting(false);
+              }}
+            >
+              {grid.map((row, r) =>
+                row.map((char, c) => (
+                  <button
+                    key={`${r}-${c}`}
+                    type="button"
+                    className={styles.gridCellBtn}
+                    style={cellStyle(char)}
+                    onMouseDown={() => {
+                      paintRef.current = true;
+                      setIsPainting(true);
+                      paintCell(r, c);
+                    }}
+                    onMouseEnter={() => {
+                      if (paintRef.current || isPainting) {
+                        paintCell(r, c);
+                      }
+                    }}
+                    title={char === TRANSPARENT_CHAR ? "empty" : styleMap[char]?.label ?? char}
+                  >
+                    {char === TRANSPARENT_CHAR ? "" : char}
+                  </button>
+                )),
+              )}
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="rows-text">Rows text (top line = top row)</label>
+              <textarea
+                id="rows-text"
+                value={rowsText}
+                onChange={(e) => setRowsText(e.target.value)}
+                placeholder={"ababa\n-b-b-"}
+              />
+              <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
+                Apply rows text
+              </button>
+            </div>
+
+            <h2 className={styles.sectionGap}>Features</h2>
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={planEnabled}
+                onChange={(e) => setPlanEnabled(e.target.checked)}
+              />
+              Plan overlay (setback &amp; buildable zone)
+            </label>
+            {planEnabled && (
+              <div className={styles.featureBlock}>
                 <div className={styles.row2}>
                   <div className={styles.field}>
-                    <label htmlFor="width">Width (blocks)</label>
-                    <input
-                      id="width"
-                      type="number"
-                      min={1}
-                      value={width}
-                      onChange={(e) => setWidth(Number(e.target.value) || 1)}
-                    />
+                    <label>Width</label>
+                    <input type="number" min={1} value={width} onChange={(e) => setWidth(Number(e.target.value) || 1)} />
                   </div>
                   <div className={styles.field}>
-                    <label htmlFor="depth">Depth (blocks)</label>
-                    <input
-                      id="depth"
-                      type="number"
-                      min={1}
-                      value={depth}
-                      onChange={(e) => setDepth(Number(e.target.value) || 1)}
-                    />
+                    <label>Depth</label>
+                    <input type="number" min={1} value={depth} onChange={(e) => setDepth(Number(e.target.value) || 1)} />
                   </div>
                 </div>
                 <div className={styles.row2}>
                   <div className={styles.field}>
-                    <label htmlFor="setback">Setback</label>
-                    <input
-                      id="setback"
-                      type="number"
-                      min={0}
-                      value={setback}
-                      onChange={(e) => setSetback(Number(e.target.value) || 0)}
-                    />
+                    <label>Setback</label>
+                    <input type="number" min={0} value={setback} onChange={(e) => setSetback(Number(e.target.value) || 0)} />
                   </div>
                   <div className={styles.field}>
-                    <label htmlFor="maxheight-plan">Max height (label)</label>
-                    <input
-                      id="maxheight-plan"
-                      type="number"
-                      min={1}
-                      value={maxheight}
-                      onChange={(e) => setMaxheight(Number(e.target.value) || 1)}
-                    />
+                    <label>Max height (label)</label>
+                    <input type="number" min={1} value={maxheight} onChange={(e) => setMaxheight(Number(e.target.value) || 1)} />
                   </div>
                 </div>
-              </>
+              </div>
             )}
 
-            {view === "elevation" && (
-              <>
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={elevationEnabled}
+                onChange={(e) => setElevationEnabled(e.target.checked)}
+              />
+              Elevation column (height limit)
+            </label>
+            {elevationEnabled && (
+              <div className={styles.featureBlock}>
                 <div className={styles.row2}>
                   <div className={styles.field}>
-                    <label htmlFor="maxheight-elev">Max height</label>
-                    <input
-                      id="maxheight-elev"
-                      type="number"
-                      min={1}
-                      value={maxheight}
-                      onChange={(e) => setMaxheight(Number(e.target.value) || 1)}
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="columns">Columns</label>
-                    <input
-                      id="columns"
-                      type="number"
-                      min={1}
-                      value={columns}
-                      onChange={(e) => setColumns(Number(e.target.value) || 1)}
-                    />
+                    <label>Max height</label>
+                    <input type="number" min={1} value={maxheight} onChange={(e) => setMaxheight(Number(e.target.value) || 1)} />
                   </div>
                 </div>
                 <label className={styles.checkbox}>
-                  <input
-                    type="checkbox"
-                    checked={showover}
-                    onChange={(e) => setShowover(e.target.checked)}
-                  />
+                  <input type="checkbox" checked={showover} onChange={(e) => setShowover(e.target.checked)} />
                   Show over-limit block (red, 50% opacity)
                 </label>
-              </>
-            )}
-
-            {view === "grid" && (
-              <>
-                <div className={styles.field}>
-                  <label htmlFor="subtitle">Subtitle (optional)</label>
-                  <input
-                    id="subtitle"
-                    value={subtitle}
-                    onChange={(e) => setSubtitle(e.target.value)}
-                    placeholder="Custom legend text"
-                  />
-                </div>
-
-                <p className={styles.hint}>Brush — click a cell to paint, or double-click to cycle symbols.</p>
-                <div className={styles.palette}>
-                  {(Object.keys(SYMBOL_META) as GridSymbol[]).map((sym) => (
-                    <button
-                      key={sym}
-                      type="button"
-                      className={brush === sym ? styles.swatchActive : styles.swatch}
-                      onClick={() => setBrush(sym)}
-                    >
-                      {sym} · {SYMBOL_META[sym].label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className={styles.row2}>
-                  <div className={styles.field}>
-                    <label htmlFor="grid-rows">Rows</label>
-                    <input
-                      id="grid-rows"
-                      type="number"
-                      min={1}
-                      value={gridRows}
-                      onChange={(e) => resizeGrid(Number(e.target.value) || 1, gridCols)}
-                    />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor="grid-cols">Columns</label>
-                    <input
-                      id="grid-cols"
-                      type="number"
-                      min={1}
-                      value={gridCols}
-                      onChange={(e) => resizeGrid(gridRows, Number(e.target.value) || 1)}
-                    />
-                  </div>
-                </div>
-
-                <div
-                  className={styles.gridEditor}
-                  style={{ gridTemplateColumns: `repeat(${gridCols}, 28px)` }}
-                >
-                  {grid.map((row, r) =>
-                    row.map((sym, c) => (
-                      <button
-                        key={`${r}-${c}`}
-                        type="button"
-                        className={SYMBOL_META[sym].className}
-                        onClick={() => paintCell(r, c)}
-                        onDoubleClick={() => cycleCell(r, c)}
-                        title={SYMBOL_META[sym].label}
-                      >
-                        {sym === "." ? "" : sym}
-                      </button>
-                    )),
-                  )}
-                </div>
-
-                <div className={styles.field}>
-                  <label htmlFor="rows-text">Rows text (alternate input)</label>
-                  <textarea
-                    id="rows-text"
-                    value={rowsText}
-                    onChange={(e) => setRowsText(e.target.value)}
-                    placeholder={"xoxox\n-o-o-"}
-                  />
-                  <button type="button" className={styles.buttonSecondary} onClick={applyRowsText}>
-                    Apply rows text
-                  </button>
-                </div>
-              </>
+              </div>
             )}
 
             <div className={styles.actions}>
@@ -389,11 +499,7 @@ export default function SketchEditorPage() {
             <div className={styles.previewFrame}>
               {previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={previewKey}
-                  src={`${previewUrl}&_=${previewKey}`}
-                  alt="Sketch preview"
-                />
+                <img key={previewKey} src={`${previewUrl}&_=${previewKey}`} alt="Sketch preview" />
               ) : (
                 <span className={styles.placeholder}>Click Preview to render the API result</span>
               )}

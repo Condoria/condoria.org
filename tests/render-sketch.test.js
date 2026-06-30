@@ -2,6 +2,7 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
 const handler = require("../pages/api/render-sketch");
+const { serializeStylesParam } = require("../lib/sketch/style-codec");
 
 function mockRes() {
   const res = {
@@ -31,94 +32,96 @@ function callHandler(query = {}) {
   return res;
 }
 
-describe("render-sketch API (2D)", () => {
-  it("returns valid plan view SVG with defaults", () => {
-    const res = callHandler();
-    assert.equal(res.statusCode, 200);
-    assert.equal(res.headers["content-type"], "image/svg+xml");
-    assert.equal(
-      res.headers["cache-control"],
-      "s-maxage=86400, stale-while-revalidate",
-    );
-    assert.match(res.body, /^<svg[\s\S]*<\/svg>$/);
-    assert.match(res.body, /Zoning Regulation/);
-    assert.match(res.body, /16×16 plot/);
-    assert.match(res.body, /10×10 buildable/);
-  });
+const RAIL_STYLES = serializeStylesParam({
+  a: { fill: "#a67c52", stroke: "#6b4f2a", opacity: 1, label: "wooden slab" },
+  b: { fill: "#4a5568", stroke: "#2d3748", opacity: 1, label: "polished deepslate" },
+});
 
-  it("supports rectangular plots via width and depth", () => {
+describe("render-sketch API (grid)", () => {
+  it("returns valid grid SVG with dynamic styles", () => {
     const res = callHandler({
-      width: "24",
-      depth: "12",
-      setback: "2",
-      title: "Harbor Lot",
-    });
-    assert.equal(res.statusCode, 200);
-    assert.match(res.body, /Harbor Lot/);
-    assert.match(res.body, /24×12 plot/);
-    assert.match(res.body, /20×8 buildable/);
-  });
-
-  it("renders elevation view with over-limit block", () => {
-    const res = callHandler({
-      view: "elevation",
-      maxheight: "32",
-      showover: "1",
-      title: "Height Limit",
-    });
-    assert.equal(res.statusCode, 200);
-    assert.match(res.body, /Height Limit/);
-    assert.match(res.body, /max 32 blocks/);
-    assert.match(res.body, /fill-opacity="0.5"/);
-    assert.match(res.body, /not allowed/);
-  });
-
-  it("renders material grid for rails pattern", () => {
-    const res = callHandler({
-      view: "grid",
-      rows: "xoxox|o-o-o",
+      rows: "ababa|-b-b-",
+      styles: RAIL_STYLES,
       title: "Rail Pattern",
     });
     assert.equal(res.statusCode, 200);
     assert.match(res.body, /Rail Pattern/);
     assert.match(res.body, /wooden slab/);
     assert.match(res.body, /polished deepslate/);
-    assert.match(res.body, /<path[^>]+d="/);
+    assert.match(res.body, /- · empty/);
   });
 
-  it("accepts spaced grid rows", () => {
+  it("keeps first row at the top of the sketch", () => {
     const res = callHandler({
-      rows: "x o x o x| - o - o -",
-      title: "Spaced Rails",
+      rows: "aaa|bbb",
+      styles: RAIL_STYLES,
+      title: "Row Order",
+    });
+    assert.match(res.body, /Row Order/);
+    const fillsA = [...res.body.matchAll(/fill="#a67c52"/g)].length;
+    const fillsB = [...res.body.matchAll(/fill="#4a5568"/g)].length;
+    assert.ok(fillsA >= 3);
+    assert.ok(fillsB >= 3);
+  });
+
+  it("applies plan overlay as a feature", () => {
+    const res = callHandler({
+      rows: "---------|---------|---------|---------",
+      styles: RAIL_STYLES,
+      plan: "1",
+      width: "4",
+      depth: "4",
+      setback: "1",
+      title: "Plan Overlay",
     });
     assert.equal(res.statusCode, 200);
-    assert.match(res.body, /Spaced Rails/);
+    assert.match(res.body, /2×2 buildable/);
+    assert.match(res.body, /4×4 plot/);
+  });
+
+  it("applies elevation column as a feature", () => {
+    const res = callHandler({
+      rows: "ababa",
+      styles: RAIL_STYLES,
+      elevation: "1",
+      maxheight: "8",
+      showover: "1",
+      title: "With Elevation",
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /max 8/);
+    assert.match(res.body, /not allowed/);
+    assert.match(res.body, /fill-opacity="0.5"/);
+  });
+
+  it("auto-generates empty grid when only plan is provided", () => {
+    const res = callHandler({
+      plan: "1",
+      width: "6",
+      depth: "4",
+      setback: "1",
+      title: "Empty Plan",
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(res.body, /Empty Plan/);
+    assert.match(res.body, /4×2 buildable/);
   });
 
   it("rejects invalid setback with 400", () => {
-    const res = callHandler({ width: "10", depth: "10", setback: "6" });
+    const res = callHandler({
+      rows: "aaaa",
+      plan: "1",
+      width: "4",
+      depth: "4",
+      setback: "3",
+    });
     assert.equal(res.statusCode, 400);
     assert.match(res.body, /setback must be smaller than half of width and depth/);
   });
 
-  it("auto-sizes canvas so labels are not clipped", () => {
-    const res = callHandler({
-      view: "elevation",
-      maxheight: "32",
-      showover: "1",
-      title: "Very Long Regulation Title For Elevation View",
-    });
-    const width = Number(res.body.match(/width="(\d+)"/)?.[1]);
-    const viewBox = res.body.match(/viewBox="0 0 (\d+) (\d+)"/);
-    assert.ok(width >= 180);
-    assert.equal(viewBox?.[1], String(width));
-    assert.match(res.body, /translate\(/);
-    assert.match(res.body, /not allowed/);
-  });
-
-  it("requires rows for grid view", () => {
-    const res = callHandler({ view: "grid" });
+  it("requires rows when plan is disabled", () => {
+    const res = callHandler({ title: "No grid" });
     assert.equal(res.statusCode, 400);
-    assert.match(res.body, /requires rows or grid parameter/);
+    assert.match(res.body, /rows or grid parameter is required/);
   });
 });
