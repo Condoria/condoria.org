@@ -101,6 +101,7 @@ export default function SketchEditorPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [editingBrush, setEditingBrush] = useState<string | null>(null);
   const paintRef = useRef(false);
   const paintModeRef = useRef<"paint" | "erase" | null>(null);
   const movedDuringPaintRef = useRef(false);
@@ -228,6 +229,7 @@ export default function SketchEditorPage() {
       },
     }));
     setBrush(key);
+    setEditingBrush(key);
   }, [styleMap]);
 
   const removeStyle = useCallback((key: string) => {
@@ -237,6 +239,17 @@ export default function SketchEditorPage() {
       return next;
     });
     setBrush((current) => (current === key ? TRANSPARENT_CHAR : current));
+    setEditingBrush((current) => (current === key ? null : current));
+  }, []);
+
+  const selectEraser = useCallback(() => {
+    setBrush(TRANSPARENT_CHAR);
+    setEditingBrush(null);
+  }, []);
+
+  const openBrushEditor = useCallback((key: string) => {
+    setBrush(key);
+    setEditingBrush(key);
   }, []);
 
   useEffect(() => {
@@ -406,13 +419,13 @@ export default function SketchEditorPage() {
 
             <section className={`${styles.panel} ${styles.brushPanel}`} aria-label="Brush menu">
               <h2>Brushes</h2>
-              <p className={styles.hint}>Select a brush, then paint on the canvas.</p>
+              <p className={styles.hint}>Click a brush to edit it, then paint on the canvas.</p>
 
               <div className={styles.brushRow}>
                 <button
                   type="button"
                   className={brush === TRANSPARENT_CHAR ? styles.brushActive : styles.brush}
-                  onClick={() => setBrush(TRANSPARENT_CHAR)}
+                  onClick={selectEraser}
                   title="Transparent eraser"
                 >
                   <span className={styles.brushSwatchEraser} aria-hidden />
@@ -425,8 +438,10 @@ export default function SketchEditorPage() {
                     <button
                       key={key}
                       type="button"
-                      className={brush === key ? styles.brushActive : styles.brush}
-                      onClick={() => setBrush(key)}
+                      className={
+                        brush === key || editingBrush === key ? styles.brushActive : styles.brush
+                      }
+                      onClick={() => openBrushEditor(key)}
                       title={style.label}
                     >
                       <span
@@ -439,59 +454,8 @@ export default function SketchEditorPage() {
                     </button>
                   ))}
               </div>
-
-              <div className={styles.styleList}>
-                {Object.entries(styleMap)
-                  .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([key, style]) => (
-                    <div key={key} className={styles.styleCard}>
-                      <div className={styles.styleCardHeader}>
-                        <strong>{key}</strong>
-                        <button type="button" className={styles.linkButton} onClick={() => removeStyle(key)}>
-                          remove
-                        </button>
-                      </div>
-                      <div className={styles.row2}>
-                        <div className={styles.field}>
-                          <label>Fill</label>
-                          <input
-                            type="color"
-                            value={style.fill}
-                            onChange={(e) => updateStyle(key, { fill: e.target.value })}
-                          />
-                        </div>
-                        <div className={styles.field}>
-                          <label>Border</label>
-                          <input
-                            type="color"
-                            value={style.stroke}
-                            onChange={(e) => updateStyle(key, { stroke: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div className={styles.field}>
-                        <label>Opacity ({style.opacity})</label>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={style.opacity}
-                          onChange={(e) => updateStyle(key, { opacity: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className={styles.field}>
-                        <label>Legend label</label>
-                        <input
-                          value={style.label}
-                          onChange={(e) => updateStyle(key, { label: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  ))}
-              </div>
               <button type="button" className={styles.buttonSecondary} onClick={addStyle}>
-                + Add style
+                + Add brush
               </button>
             </section>
           </div>
@@ -608,6 +572,120 @@ export default function SketchEditorPage() {
             </div>
           </section>
         </div>
+
+        {editingBrush && styleMap[editingBrush] && (
+          <div
+            className={styles.overlayBackdrop}
+            onClick={() => setEditingBrush(null)}
+            role="presentation"
+          >
+            <div
+              className={styles.overlayPanel}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-labelledby="brush-editor-title"
+            >
+              <div className={styles.overlayHeader}>
+                <h3 id="brush-editor-title">Brush &ldquo;{editingBrush}&rdquo;</h3>
+                <button
+                  type="button"
+                  className={styles.overlayClose}
+                  onClick={() => setEditingBrush(null)}
+                  aria-label="Close"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className={styles.overlayPreview}>
+                <span
+                  className={styles.overlayPreviewSwatch}
+                  style={{
+                    background: styleMap[editingBrush].fill,
+                    borderColor: styleMap[editingBrush].stroke,
+                    opacity: styleMap[editingBrush].opacity,
+                  }}
+                />
+                <span className={styles.overlayPreviewLabel}>{styleMap[editingBrush].label}</span>
+              </div>
+
+              <div className={styles.colorField}>
+                <label htmlFor={`fill-${editingBrush}`}>Fill</label>
+                <div className={styles.colorControl}>
+                  <span
+                    className={styles.colorPreview}
+                    style={{ background: styleMap[editingBrush].fill }}
+                    aria-hidden
+                  />
+                  <input
+                    id={`fill-${editingBrush}`}
+                    className={styles.colorInput}
+                    type="color"
+                    value={styleMap[editingBrush].fill}
+                    onChange={(e) => updateStyle(editingBrush, { fill: e.target.value })}
+                  />
+                  <code className={styles.colorHex}>{styleMap[editingBrush].fill}</code>
+                </div>
+              </div>
+
+              <div className={styles.colorField}>
+                <label htmlFor={`stroke-${editingBrush}`}>Border</label>
+                <div className={styles.colorControl}>
+                  <span
+                    className={styles.colorPreview}
+                    style={{ background: styleMap[editingBrush].stroke }}
+                    aria-hidden
+                  />
+                  <input
+                    id={`stroke-${editingBrush}`}
+                    className={styles.colorInput}
+                    type="color"
+                    value={styleMap[editingBrush].stroke}
+                    onChange={(e) => updateStyle(editingBrush, { stroke: e.target.value })}
+                  />
+                  <code className={styles.colorHex}>{styleMap[editingBrush].stroke}</code>
+                </div>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor={`opacity-${editingBrush}`}>
+                  Opacity ({styleMap[editingBrush].opacity})
+                </label>
+                <input
+                  id={`opacity-${editingBrush}`}
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={styleMap[editingBrush].opacity}
+                  onChange={(e) => updateStyle(editingBrush, { opacity: Number(e.target.value) })}
+                />
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor={`label-${editingBrush}`}>Legend label</label>
+                <input
+                  id={`label-${editingBrush}`}
+                  value={styleMap[editingBrush].label}
+                  onChange={(e) => updateStyle(editingBrush, { label: e.target.value })}
+                />
+              </div>
+
+              <div className={styles.overlayActions}>
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  onClick={() => removeStyle(editingBrush)}
+                >
+                  Remove brush
+                </button>
+                <button type="button" className={styles.button} onClick={() => setEditingBrush(null)}>
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </>
   );
