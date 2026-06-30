@@ -434,6 +434,37 @@
   padding-left: 0.25rem;
 }
 
+.fieldHint {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #666;
+}
+
+.fieldWarning {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #9a6700;
+}
+
+.fieldError,
+.previewError {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #b42318;
+}
+
+.previewError {
+  margin-bottom: 0.5rem;
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .gridEditor {
   display: grid;
   gap: 2px;

@@ -6,6 +6,11 @@ import {
   serializeStylesParam,
   type CellStyleMap,
 } from "@/lib/sketch/editor-types";
+import {
+  getEffectivePlanSize,
+  maxSetbackForPlot,
+  validatePlanSetback,
+} from "@/lib/sketch/plan";
 import styles from "@/styles/sketch-editor.module.css";
 
 type CellChar = string;
@@ -100,6 +105,7 @@ export default function SketchEditorPage() {
   const [showover, setShowover] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState(0);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [editingBrush, setEditingBrush] = useState<string | null>(null);
   const paintRef = useRef(false);
@@ -109,6 +115,27 @@ export default function SketchEditorPage() {
 
   const gridRows = grid.length;
   const gridCols = grid[0]?.length ?? 1;
+
+  const effectivePlan = useMemo(
+    () => getEffectivePlanSize(width, depth, gridCols, gridRows),
+    [width, depth, gridCols, gridRows],
+  );
+
+  const planError = useMemo(() => {
+    if (!planEnabled) {
+      return null;
+    }
+    return validatePlanSetback(setback, effectivePlan.width, effectivePlan.depth);
+  }, [planEnabled, setback, effectivePlan.width, effectivePlan.depth]);
+
+  const planClipped =
+    planEnabled && (width > gridCols || depth > gridRows);
+
+  useEffect(() => {
+    if (!planError) {
+      setPreviewError(null);
+    }
+  }, [planError]);
 
   const draftUrl = useMemo(
     () =>
@@ -297,10 +324,38 @@ export default function SketchEditorPage() {
     return () => window.removeEventListener("mouseup", stopPainting);
   }, [toggleCell]);
 
-  const handleGenerate = () => {
-    setPreviewUrl(draftUrl);
-    setPreviewKey((k) => k + 1);
+  const handleGenerate = async () => {
     setCopied(false);
+    if (planError) {
+      setPreviewError(planError);
+      setPreviewUrl(null);
+      return;
+    }
+
+    try {
+      const res = await fetch(draftUrl);
+      if (!res.ok) {
+        const message = (await res.text()).trim() || "Failed to render sketch";
+        setPreviewError(message);
+        setPreviewUrl(null);
+        return;
+      }
+      setPreviewError(null);
+      setPreviewUrl(draftUrl);
+      setPreviewKey((k) => k + 1);
+    } catch {
+      setPreviewError("Could not reach the render API.");
+      setPreviewUrl(null);
+    }
+  };
+
+  const handlePlanToggle = (enabled: boolean) => {
+    setPlanEnabled(enabled);
+    if (enabled) {
+      setWidth(gridCols);
+      setDepth(gridRows);
+      setSetback((current) => Math.min(current, maxSetbackForPlot(gridCols, gridRows)));
+    }
   };
 
   const handleCopy = async () => {
@@ -564,32 +619,69 @@ export default function SketchEditorPage() {
                   <input
                     type="checkbox"
                     checked={planEnabled}
-                    onChange={(e) => setPlanEnabled(e.target.checked)}
+                    onChange={(e) => handlePlanToggle(e.target.checked)}
                   />
                   Plan overlay
                 </label>
                 {planEnabled && (
                   <div className={styles.featureBlock}>
+                    <p className={styles.fieldHint}>
+                      Plot size is in Minecraft blocks (not grid rows/columns). The overlay is drawn on
+                      your canvas and clipped to {gridCols}×{gridRows} cells — effective area{" "}
+                      {effectivePlan.width}×{effectivePlan.depth} blocks.
+                    </p>
+                    {planClipped && (
+                      <p className={styles.fieldWarning}>
+                        Plot is larger than the canvas; only the top-left {effectivePlan.width}×
+                        {effectivePlan.depth} cells show the overlay.
+                      </p>
+                    )}
                     <div className={styles.row2}>
                       <div className={styles.field}>
-                        <label>Width</label>
-                        <input type="number" min={1} value={width} onChange={(e) => setWidth(Number(e.target.value) || 1)} />
+                        <label htmlFor="plan-width">Plot width (blocks)</label>
+                        <input
+                          id="plan-width"
+                          type="number"
+                          min={1}
+                          value={width}
+                          onChange={(e) => setWidth(Number(e.target.value) || 1)}
+                        />
                       </div>
                       <div className={styles.field}>
-                        <label>Depth</label>
-                        <input type="number" min={1} value={depth} onChange={(e) => setDepth(Number(e.target.value) || 1)} />
+                        <label htmlFor="plan-depth">Plot depth (blocks)</label>
+                        <input
+                          id="plan-depth"
+                          type="number"
+                          min={1}
+                          value={depth}
+                          onChange={(e) => setDepth(Number(e.target.value) || 1)}
+                        />
                       </div>
                     </div>
                     <div className={styles.row2}>
                       <div className={styles.field}>
-                        <label>Setback</label>
-                        <input type="number" min={0} value={setback} onChange={(e) => setSetback(Number(e.target.value) || 0)} />
+                        <label htmlFor="plan-setback">Setback (blocks from each edge)</label>
+                        <input
+                          id="plan-setback"
+                          type="number"
+                          min={0}
+                          max={maxSetbackForPlot(effectivePlan.width, effectivePlan.depth)}
+                          value={setback}
+                          onChange={(e) => setSetback(Number(e.target.value) || 0)}
+                        />
                       </div>
                       <div className={styles.field}>
-                        <label>Max height label</label>
-                        <input type="number" min={1} value={maxheight} onChange={(e) => setMaxheight(Number(e.target.value) || 1)} />
+                        <label htmlFor="plan-maxheight">Max height label</label>
+                        <input
+                          id="plan-maxheight"
+                          type="number"
+                          min={1}
+                          value={maxheight}
+                          onChange={(e) => setMaxheight(Number(e.target.value) || 1)}
+                        />
                       </div>
                     </div>
+                    {planError && <p className={styles.fieldError}>{planError}</p>}
                   </div>
                 )}
               </div>
@@ -619,7 +711,12 @@ export default function SketchEditorPage() {
             </div>
 
             <div className={styles.actions}>
-              <button type="button" className={styles.button} onClick={handleGenerate}>
+              <button
+                type="button"
+                className={styles.button}
+                onClick={handleGenerate}
+                disabled={Boolean(planError)}
+              >
                 Generate
               </button>
               <button type="button" className={styles.buttonSecondary} onClick={handleCopy}>
@@ -628,6 +725,7 @@ export default function SketchEditorPage() {
             </div>
 
             <div className={styles.urlBox}>{draftUrl}</div>
+            {previewError && <p className={styles.previewError}>{previewError}</p>}
             <div className={styles.previewFrame}>
               {previewUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

@@ -1,6 +1,7 @@
 const { createApiHandler } = require("../../lib/sketch/handler");
 const { renderSketch } = require("../../lib/sketch/render-2d");
 const { parseStylesParam } = require("../../lib/sketch/style-codec");
+const { getEffectivePlanSize, validatePlanSetback } = require("../../lib/sketch/plan");
 const {
   parseTitle,
   parsePlanFeature,
@@ -25,11 +26,19 @@ function renderFromQuery(query) {
     }
   }
 
-  if (plan.enabled && plan.setback * 2 >= plan.width) {
-    throw new Error("setback must be smaller than half of width and depth");
-  }
-  if (plan.enabled && plan.setback * 2 >= plan.depth) {
-    throw new Error("setback must be smaller than half of width and depth");
+  if (plan.enabled) {
+    const gridCols = rows[0].length;
+    const gridRows = rows.length;
+    const { width: plotW, depth: plotD } = getEffectivePlanSize(
+      plan.width,
+      plan.depth,
+      gridCols,
+      gridRows,
+    );
+    const setbackError = validatePlanSetback(plan.setback, plotW, plotD);
+    if (setbackError) {
+      throw new Error(setbackError);
+    }
   }
 
   return renderSketch({

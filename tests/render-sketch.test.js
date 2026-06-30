@@ -116,7 +116,20 @@ describe("render-sketch API (grid)", () => {
       setback: "3",
     });
     assert.equal(res.statusCode, 400);
-    assert.match(res.body, /setback must be smaller than half of width and depth/);
+    assert.match(res.body, /Setback \(3 blocks\) must be less than half the plot width on the grid \(4 blocks\)/);
+  });
+
+  it("rejects setback when plot is clipped to a small grid", () => {
+    const res = callHandler({
+      rows: "ababa|-b-b-",
+      styles: RAIL_STYLES,
+      plan: "1",
+      width: "16",
+      depth: "16",
+      setback: "3",
+    });
+    assert.equal(res.statusCode, 400);
+    assert.match(res.body, /plot width on the grid \(5 blocks\)/);
   });
 
   it("requires rows when plan is disabled", () => {
