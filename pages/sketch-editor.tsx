@@ -102,6 +102,9 @@ export default function SketchEditorPage() {
   const [previewKey, setPreviewKey] = useState(0);
   const [copied, setCopied] = useState(false);
   const paintRef = useRef(false);
+  const paintModeRef = useRef<"paint" | "erase" | null>(null);
+  const movedDuringPaintRef = useRef(false);
+  const startCellRef = useRef<{ row: number; col: number } | null>(null);
 
   const gridRows = grid.length;
   const gridCols = grid[0]?.length ?? 1;
@@ -156,17 +159,50 @@ export default function SketchEditorPage() {
     [syncRowsTextFromGrid],
   );
 
-  const paintCell = useCallback((row: number, col: number) => {
-    setGrid((prev) => {
-      if (prev[row][col] === brush) {
-        return prev;
-      }
-      const next = prev.map((r) => [...r]);
-      next[row][col] = brush;
-      syncRowsTextFromGrid(next);
-      return next;
-    });
-  }, [brush, syncRowsTextFromGrid]);
+  const setCell = useCallback(
+    (row: number, col: number, value: CellChar) => {
+      setGrid((prev) => {
+        if (prev[row][col] === value) {
+          return prev;
+        }
+        const next = prev.map((r) => [...r]);
+        next[row][col] = value;
+        syncRowsTextFromGrid(next);
+        return next;
+      });
+    },
+    [syncRowsTextFromGrid],
+  );
+
+  const clearCell = useCallback(
+    (row: number, col: number) => {
+      setCell(row, col, TRANSPARENT_CHAR);
+    },
+    [setCell],
+  );
+
+  const paintCellForce = useCallback(
+    (row: number, col: number) => {
+      setCell(row, col, brush);
+    },
+    [brush, setCell],
+  );
+
+  const toggleCell = useCallback(
+    (row: number, col: number) => {
+      setGrid((prev) => {
+        const nextChar = prev[row][col] === brush ? TRANSPARENT_CHAR : brush;
+        if (prev[row][col] === nextChar) {
+          return prev;
+        }
+        const next = prev.map((r) => [...r]);
+        next[row][col] = nextChar;
+        syncRowsTextFromGrid(next);
+        return next;
+      });
+    },
+    [brush, syncRowsTextFromGrid],
+  );
 
   const applyRowsText = useCallback(() => {
     const parsed = parseRowsText(rowsText);
@@ -205,11 +241,23 @@ export default function SketchEditorPage() {
 
   useEffect(() => {
     const stopPainting = () => {
+      if (
+        paintRef.current &&
+        !movedDuringPaintRef.current &&
+        paintModeRef.current === "paint" &&
+        startCellRef.current
+      ) {
+        const { row, col } = startCellRef.current;
+        toggleCell(row, col);
+      }
       paintRef.current = false;
+      paintModeRef.current = null;
+      movedDuringPaintRef.current = false;
+      startCellRef.current = null;
     };
     window.addEventListener("mouseup", stopPainting);
     return () => window.removeEventListener("mouseup", stopPainting);
-  }, []);
+  }, [toggleCell]);
 
   const handleGenerate = () => {
     setPreviewUrl(draftUrl);
@@ -225,14 +273,43 @@ export default function SketchEditorPage() {
 
   const beginPaint = (e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
+
+    if (e.button === 2) {
+      paintModeRef.current = "erase";
+      paintRef.current = true;
+      movedDuringPaintRef.current = false;
+      startCellRef.current = { row, col };
+      clearCell(row, col);
+      return;
+    }
+
+    if (e.button !== 0) {
+      return;
+    }
+
+    paintModeRef.current = "paint";
     paintRef.current = true;
-    paintCell(row, col);
+    movedDuringPaintRef.current = false;
+    startCellRef.current = { row, col };
   };
 
   const continuePaint = (row: number, col: number) => {
-    if (paintRef.current) {
-      paintCell(row, col);
+    if (!paintRef.current || !paintModeRef.current) {
+      return;
     }
+
+    if (paintModeRef.current === "erase") {
+      movedDuringPaintRef.current = true;
+      clearCell(row, col);
+      return;
+    }
+
+    if (!movedDuringPaintRef.current && startCellRef.current) {
+      movedDuringPaintRef.current = true;
+      const { row: startRow, col: startCol } = startCellRef.current;
+      paintCellForce(startRow, startCol);
+    }
+    paintCellForce(row, col);
   };
 
   const cellStyle = (char: CellChar): React.CSSProperties => {
@@ -297,8 +374,10 @@ export default function SketchEditorPage() {
                 className={styles.paintCanvas}
                 onMouseLeave={() => {
                   paintRef.current = false;
+                  paintModeRef.current = null;
                 }}
                 onDragStart={(e) => e.preventDefault()}
+                onContextMenu={(e) => e.preventDefault()}
               >
                 <div
                   className={styles.gridEditor}
