@@ -242,3 +242,5 @@ module.exports = function handler(req, res) {
     res.end(err instanceof Error ? err.message : "Failed to render sketch");
   }
 };
+
+module.exports.default = module.exports;
