@@ -208,6 +208,7 @@ export default function SketchEditorPage() {
   const applyRowsText = useCallback(() => {
     const parsed = parseRowsText(rowsText);
     setGrid(parsed);
+    setRowsText(gridToRowsText(parsed));
   }, [rowsText]);
 
   const updateStyle = useCallback((key: string, patch: Partial<CellStyleMap[string]>) => {
@@ -232,6 +233,10 @@ export default function SketchEditorPage() {
     setEditingBrush(key);
   }, [styleMap]);
 
+  const closeBrushEditor = useCallback(() => {
+    setEditingBrush(null);
+  }, []);
+
   const removeStyle = useCallback((key: string) => {
     setStyleMap((prev) => {
       const next = { ...prev };
@@ -247,10 +252,30 @@ export default function SketchEditorPage() {
     setEditingBrush(null);
   }, []);
 
-  const openBrushEditor = useCallback((key: string) => {
-    setBrush(key);
-    setEditingBrush(key);
-  }, []);
+  const handleBrushClick = useCallback(
+    (key: string) => {
+      if (brush === key) {
+        setEditingBrush((current) => (current === key ? null : key));
+        return;
+      }
+      setBrush(key);
+      setEditingBrush(null);
+    },
+    [brush],
+  );
+
+  useEffect(() => {
+    if (!editingBrush) {
+      return;
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeBrushEditor();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [editingBrush, closeBrushEditor]);
 
   useEffect(() => {
     const stopPainting = () => {
@@ -286,6 +311,7 @@ export default function SketchEditorPage() {
 
   const beginPaint = (e: React.MouseEvent, row: number, col: number) => {
     e.preventDefault();
+    setEditingBrush(null);
 
     if (e.button === 2) {
       paintModeRef.current = "erase";
@@ -343,6 +369,8 @@ export default function SketchEditorPage() {
     };
   };
 
+  const activeBrushStyle = brush === TRANSPARENT_CHAR ? null : styleMap[brush] ?? null;
+
   return (
     <>
       <Head>
@@ -351,14 +379,44 @@ export default function SketchEditorPage() {
       <main className={styles.page}>
         <header className={styles.header}>
           <h1>Zoning Sketch Editor</h1>
-          <p>Paint on the canvas, pick brushes on the right, then generate a shareable sketch URL.</p>
+          <p>
+            Select a brush to paint. Click a selected brush again to edit it. Right-click or drag on
+            the canvas to erase.
+          </p>
         </header>
 
         <div className={styles.workspace}>
           <div className={styles.row1}>
             <section className={`${styles.panel} ${styles.paintPanel}`} aria-label="Paint canvas">
               <div className={styles.paintToolbar}>
-                <h2>Canvas</h2>
+                <div className={styles.paintToolbarTitle}>
+                  <h2>Canvas</h2>
+                  <div className={styles.activeBrushChip} aria-label="Active brush">
+                    {brush === TRANSPARENT_CHAR ? (
+                      <>
+                        <span className={styles.chipSwatchEraser} aria-hidden />
+                        <span>Eraser</span>
+                      </>
+                    ) : activeBrushStyle ? (
+                      <>
+                        <span
+                          className={styles.chipSwatch}
+                          style={{
+                            background: activeBrushStyle.fill,
+                            borderColor: activeBrushStyle.stroke,
+                            opacity: activeBrushStyle.opacity,
+                          }}
+                          aria-hidden
+                        />
+                        <span>
+                          {brush} · {activeBrushStyle.label}
+                        </span>
+                      </>
+                    ) : (
+                      <span>{brush}</span>
+                    )}
+                  </div>
+                </div>
                 <div className={styles.row2}>
                   <div className={styles.fieldCompact}>
                     <label htmlFor="grid-rows">Rows</label>
@@ -419,14 +477,14 @@ export default function SketchEditorPage() {
 
             <section className={`${styles.panel} ${styles.brushPanel}`} aria-label="Brush menu">
               <h2>Brushes</h2>
-              <p className={styles.hint}>Click a brush to edit it, then paint on the canvas.</p>
+              <p className={styles.hint}>Click to select · click again to edit</p>
 
               <div className={styles.brushRow}>
                 <button
                   type="button"
                   className={brush === TRANSPARENT_CHAR ? styles.brushActive : styles.brush}
                   onClick={selectEraser}
-                  title="Transparent eraser"
+                  title="Eraser — left-click or drag to clear cells"
                 >
                   <span className={styles.brushSwatchEraser} aria-hidden />
                   <span className={styles.brushKey}>{TRANSPARENT_CHAR}</span>
@@ -434,25 +492,38 @@ export default function SketchEditorPage() {
                 </button>
                 {Object.entries(styleMap)
                   .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([key, style]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      className={
-                        brush === key || editingBrush === key ? styles.brushActive : styles.brush
-                      }
-                      onClick={() => openBrushEditor(key)}
-                      title={style.label}
-                    >
-                      <span
-                        className={styles.brushSwatch}
-                        style={{ background: style.fill, borderColor: style.stroke, opacity: style.opacity }}
-                        aria-hidden
-                      />
-                      <span className={styles.brushKey}>{key}</span>
-                      <span className={styles.brushLabel}>{style.label}</span>
-                    </button>
-                  ))}
+                  .map(([key, style]) => {
+                    const isSelected = brush === key;
+                    const isEditing = editingBrush === key;
+                    const brushClass = isEditing
+                      ? styles.brushEditing
+                      : isSelected
+                        ? styles.brushActive
+                        : styles.brush;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={brushClass}
+                        onClick={() => handleBrushClick(key)}
+                        title={
+                          isSelected
+                            ? `${style.label} — click again to ${isEditing ? "close" : "edit"}`
+                            : style.label
+                        }
+                        aria-pressed={isSelected}
+                        aria-expanded={isEditing}
+                      >
+                        <span
+                          className={styles.brushSwatch}
+                          style={{ background: style.fill, borderColor: style.stroke, opacity: style.opacity }}
+                          aria-hidden
+                        />
+                        <span className={styles.brushKey}>{key}</span>
+                        <span className={styles.brushLabel}>{style.label}</span>
+                      </button>
+                    );
+                  })}
               </div>
               <button type="button" className={styles.buttonSecondary} onClick={addStyle}>
                 + Add brush
@@ -576,26 +647,28 @@ export default function SketchEditorPage() {
         {editingBrush && styleMap[editingBrush] && (
           <div
             className={styles.overlayBackdrop}
-            onClick={() => setEditingBrush(null)}
+            onClick={closeBrushEditor}
             role="presentation"
           >
             <div
               className={styles.overlayPanel}
               onClick={(e) => e.stopPropagation()}
               role="dialog"
+              aria-modal="true"
               aria-labelledby="brush-editor-title"
             >
               <div className={styles.overlayHeader}>
-                <h3 id="brush-editor-title">Brush &ldquo;{editingBrush}&rdquo;</h3>
+                <h3 id="brush-editor-title">Edit brush &ldquo;{editingBrush}&rdquo;</h3>
                 <button
                   type="button"
                   className={styles.overlayClose}
-                  onClick={() => setEditingBrush(null)}
+                  onClick={closeBrushEditor}
                   aria-label="Close"
                 >
                   ×
                 </button>
               </div>
+              <p className={styles.overlayHint}>Esc to close · changes apply immediately</p>
 
               <div className={styles.overlayPreview}>
                 <span
@@ -679,7 +752,7 @@ export default function SketchEditorPage() {
                 >
                   Remove brush
                 </button>
-                <button type="button" className={styles.button} onClick={() => setEditingBrush(null)}>
+                <button type="button" className={styles.button} onClick={closeBrushEditor}>
                   Done
                 </button>
               </div>
