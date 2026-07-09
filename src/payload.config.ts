@@ -55,7 +55,9 @@ export default buildConfig({
   collections: [Articles, Pages, Media, Categories, Users],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'condoria-insecure-dev-secret',
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  // serverURL is intentionally NOT set: media URLs stay relative
+  // (/api/media/file/…), which next/image's localPatterns matches and which
+  // survive domain changes between dev and production.
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },

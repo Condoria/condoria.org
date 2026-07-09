@@ -2,7 +2,7 @@
   "name": "condoria-cms",
   "version": "1.0.0",
   "description": "Self-hosted CMS and public site for the Nation of Condoria (Rulercraft)",
-  "license": "MIT",
+  "private": true,
   "type": "module",
   "packageManager": "pnpm@11.11.0",
   "scripts": {

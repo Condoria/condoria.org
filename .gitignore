@@ -21,6 +21,9 @@
 # local media uploads (dev)
 /media
 
+# seed-generated banner images (recreated by `pnpm seed`)
+/src/seed/assets/*.png
+
 # vercel
 .vercel
 

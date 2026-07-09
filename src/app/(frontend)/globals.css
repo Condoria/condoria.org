@@ -48,3 +48,19 @@
     @apply font-body antialiased;
   }
 }
+
+/*
+ * Base polish for the public site (Stream C). The @theme token block above
+ * is the shared contract — extend below it only.
+ */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-gold-500);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-gold-200);
+    color: var(--color-ink-900);
+  }
+}
