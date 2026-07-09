@@ -42,6 +42,11 @@ const db =
       })
 
 export default buildConfig({
+  // NO email adapter is configured — deliberately. Payload falls back to its
+  // consoleEmailAdapter: password-reset and other emails are written to the
+  // server console and NEVER sent. The nation does not own a mail domain
+  // (seed accounts use the reserved, non-routable condoria.example). If you
+  // ever add a real adapter, change every user email to a domain you own first.
   admin: {
     user: Users.slug,
     importMap: {

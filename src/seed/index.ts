@@ -28,17 +28,20 @@ import { generateBannerImages } from './images'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const assetsDir = path.resolve(here, 'assets')
 
-const DEFAULT_ADMIN_EMAIL = 'admin@condoria.org'
+// All seed accounts live on condoria.example: the .example TLD is IANA-reserved
+// and can never receive real mail. (No email adapter is configured either —
+// Payload writes emails to the console instead of sending.)
+const DEFAULT_ADMIN_EMAIL = 'admin@condoria.example'
 const DEFAULT_ADMIN_PASSWORD = 'condoria-dev-2026'
 
 /** Demo accounts (documented in the README — change these passwords!). */
 const EDITOR = {
-  email: 'editor@condoria.org',
+  email: 'editor@condoria.example',
   password: 'condoria-editor-2026',
   name: 'Keeper of Records',
 } as const
 const RESIDENT = {
-  email: 'resident@condoria.org',
+  email: 'resident@condoria.example',
   password: 'condoria-resident-2026',
   name: 'A Resident of Condoria',
 } as const

@@ -48,15 +48,25 @@ Then visit:
 The seed also creates two **demo accounts** so every role can be tried
 immediately:
 
-| Account                 | Role     | Password                |
-| ----------------------- | -------- | ----------------------- |
-| `editor@condoria.org`   | editor   | `condoria-editor-2026`  |
-| `resident@condoria.org` | resident | `condoria-resident-2026`|
+| Account                     | Role     | Password                |
+| --------------------------- | -------- | ----------------------- |
+| `editor@condoria.example`   | editor   | `condoria-editor-2026`  |
+| `resident@condoria.example` | resident | `condoria-resident-2026`|
 
 > [!IMPORTANT]
 > These are published demo credentials. **Change the admin password and both
 > demo account passwords immediately** after first login (Admin → Users), and
 > never run the seed against a shared database with the defaults.
+
+### A note on email
+
+This project deliberately configures **no email adapter**, so Payload writes
+every email (e.g. password resets) to the **server console instead of sending
+it** — no real mail ever leaves the app. All seed accounts additionally use
+the `condoria.example` domain, which is IANA-reserved and cannot receive mail
+(the nation does not own a mail domain; `condoria.org` belongs to someone
+else). If you ever add a real email adapter, first move every user to email
+addresses on a domain you actually control.
 
 ### What the seed creates
 
@@ -166,7 +176,7 @@ The database is selected by `DATABASE_ADAPTER` in `.env`:
    | `DATABASE_ADAPTER`       | `postgres`                                         |
    | `DATABASE_URL`           | the Neon connection string                         |
    | `BLOB_READ_WRITE_TOKEN`  | the Blob store token                               |
-   | `NEXT_PUBLIC_SERVER_URL` | `https://your-domain.example` (no trailing slash)  |
+   | `NEXT_PUBLIC_SERVER_URL` | `https://condoria.vercel.app` (no trailing slash)  |
 
 5. **Run the migrations against Neon** before (or as part of) the first
    deploy: locally, with the production values in your environment, run
@@ -178,7 +188,7 @@ The database is selected by `DATABASE_ADAPTER` in `.env`:
    so the monument model and banners upload to Blob), set **strong**
    `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, and run `pnpm seed`. Change the
    demo account passwords immediately afterwards, or delete those accounts.
-7. Deploy, sign in at `https://your-domain/admin`, and raise the flag.
+7. Deploy, sign in at `https://condoria.vercel.app/admin`, and raise the flag.
 
 ## Extending the CMS with custom blocks
 

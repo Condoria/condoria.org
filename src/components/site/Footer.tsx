@@ -50,7 +50,7 @@ export function Footer() {
           </nav>
         </div>
         <div className="mt-12 flex flex-col gap-2 border-t border-parchment-200/15 pt-6 text-xs text-parchment-200/60 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} The Nation of Condoria. Entered into the record at condoria.org.</p>
+          <p>© {new Date().getFullYear()} The Nation of Condoria. Entered into the record at condoria.vercel.app.</p>
           <p>Powered by Payload</p>
         </div>
       </div>
