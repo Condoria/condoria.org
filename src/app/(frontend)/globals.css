@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+/*
+ * Condoria design tokens — "official gazette" aesthetic.
+ * Parchment ground, pine green primary, antique gold accent, oxide red seal.
+ * Referenced as Tailwind utilities: bg-parchment-50, text-pine-800,
+ * border-gold-400, font-display, …
+ */
+@theme {
+  --color-parchment-50: #faf7f0;
+  --color-parchment-100: #f4eee0;
+  --color-parchment-200: #eae1cb;
+  --color-parchment-300: #d9cba6;
+
+  --color-ink-900: #1b1913;
+  --color-ink-700: #3b372b;
+  --color-ink-500: #6d654f;
+  --color-ink-400: #8d8468;
+
+  --color-pine-950: #0f1d14;
+  --color-pine-900: #16281c;
+  --color-pine-800: #1d3625;
+  --color-pine-700: #24462f;
+  --color-pine-600: #2f5a3c;
+  --color-pine-500: #3f7350;
+  --color-pine-200: #c3d5c5;
+  --color-pine-100: #dde9de;
+
+  --color-gold-600: #8f6f2a;
+  --color-gold-500: #a5812f;
+  --color-gold-400: #c9a84c;
+  --color-gold-300: #dcc27a;
+  --color-gold-200: #ead9a8;
+
+  --color-oxide-700: #7c2d21;
+  --color-oxide-600: #8a3226;
+
+  --font-display: var(--font-fraunces), 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body: var(--font-public-sans), 'Public Sans', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html {
+    @apply bg-parchment-50 text-ink-900;
+  }
+
+  body {
+    @apply font-body antialiased;
+  }
+}
