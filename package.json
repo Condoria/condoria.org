@@ -12,6 +12,7 @@
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "typecheck": "tsc --noEmit",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "prod": "node scripts/prod.mjs",
     "ship": "node scripts/ship.mjs",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",

@@ -11,6 +11,7 @@
 # environment — never commit real credentials
 .env
 .env*.local
+.env.ship
 
 # local SQLite database (dev)
 *.db

@@ -21,8 +21,12 @@ import { generateBannerImages } from './images'
  *
  *   pnpm seed        (= payload run src/seed/index.ts)
  *
- * Idempotent: if the seed admin user already exists, it exits without writing.
- * Delete condoria.db (local SQLite dev) to reseed from scratch.
+ * CONVERGENT: every entity is looked up by a natural key (username, category
+ * name, media alt text, article title, page slug) and created only when
+ * missing. Running it again completes whatever a previous run didn't create —
+ * a partially-failed seed heals itself on the next run — and a fully seeded
+ * database is left untouched. Delete condoria.db (local SQLite dev) to
+ * rebuild from scratch.
  */
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -47,6 +51,105 @@ const RESIDENT = {
 
 const log = (message: string) => console.log(`[seed] ${message}`)
 
+let createdCount = 0
+const stamp = (created: boolean, label: string) => {
+  if (created) createdCount += 1
+  log(`${created ? 'created ' : 'exists  '}${label}`)
+}
+
+async function ensureUser(
+  payload: Payload,
+  data: { username: string; password: string; name: string; role: 'admin' | 'editor' | 'resident' },
+) {
+  const found = await payload.find({
+    collection: 'users',
+    where: { username: { equals: data.username } },
+    limit: 1,
+  })
+  if (found.docs[0]) {
+    stamp(false, `user     ${data.username} (id ${found.docs[0].id})`)
+    return found.docs[0]
+  }
+  const doc = await payload.create({ collection: 'users', data })
+  stamp(true, `user     ${data.username} (id ${doc.id}, ${data.role})`)
+  return doc
+}
+
+async function ensureCategory(payload: Payload, name: string) {
+  const found = await payload.find({
+    collection: 'categories',
+    where: { name: { equals: name } },
+    limit: 1,
+  })
+  if (found.docs[0]) {
+    stamp(false, `category ${found.docs[0].slug}`)
+    return found.docs[0]
+  }
+  const doc = await payload.create({ collection: 'categories', data: { name } })
+  stamp(true, `category ${doc.slug} (id ${doc.id})`)
+  return doc
+}
+
+async function ensureMedia(payload: Payload, alt: string, filePath: string) {
+  const found = await payload.find({
+    collection: 'media',
+    where: { alt: { equals: alt } },
+    limit: 1,
+  })
+  if (found.docs[0]) {
+    stamp(false, `media    ${found.docs[0].filename}`)
+    return found.docs[0]
+  }
+  const doc = await payload.create({ collection: 'media', data: { alt }, filePath })
+  stamp(true, `media    ${doc.filename} (id ${doc.id}, ${doc.mimeType})`)
+  return doc
+}
+
+async function ensureArticle(
+  payload: Payload,
+  args: {
+    title: string
+    draft?: boolean
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: Record<string, any>
+  },
+) {
+  const found = await payload.find({
+    collection: 'articles',
+    where: { title: { equals: args.title } },
+    limit: 1,
+  })
+  if (found.docs[0]) {
+    stamp(false, `article  ${found.docs[0].slug}`)
+    return found.docs[0]
+  }
+  const doc = await payload.create({
+    collection: 'articles',
+    draft: args.draft,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: { title: args.title, ...args.data } as any,
+  })
+  stamp(true, `article  ${doc.slug}${args.draft ? ' (DRAFT)' : ''}`)
+  return doc
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ensurePage(payload: Payload, slug: string, data: Record<string, any>) {
+  const found = await payload.find({
+    collection: 'pages',
+    where: { slug: { equals: slug } },
+    limit: 1,
+  })
+  if (found.docs[0]) {
+    stamp(false, `page     ${slug}`)
+    return found.docs[0]
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const doc = await payload.create({ collection: 'pages', data: { slug, ...data } as any })
+  stamp(true, `page     ${doc.slug}`)
+  return doc
+}
+
 async function seed(payload: Payload): Promise<void> {
   // ── Credentials ───────────────────────────────────────────────────────────
   let adminUsername = process.env.SEED_ADMIN_USERNAME
@@ -62,91 +165,41 @@ async function seed(payload: Payload): Promise<void> {
     adminPassword = adminPassword || DEFAULT_ADMIN_PASSWORD
   }
 
-  // ── Idempotency check ─────────────────────────────────────────────────────
-  const existing = await payload.find({
-    collection: 'users',
-    where: { username: { equals: adminUsername } },
-    limit: 1,
-  })
-  if (existing.totalDocs > 0) {
-    log('Already seeded — nothing to do. (Delete condoria.db to reseed locally.)')
-    return
-  }
-
-  log('Seeding the Nation of Condoria…')
+  log('Converging the Nation of Condoria (existing entries are kept as-is)…')
 
   // ── 1. Users ──────────────────────────────────────────────────────────────
-  const admin = await payload.create({
-    collection: 'users',
-    data: {
-      name: 'Chancellor of Condoria',
-      username: adminUsername,
-      password: adminPassword,
-      role: 'admin',
-    },
+  const admin = await ensureUser(payload, {
+    name: 'Chancellor of Condoria',
+    username: adminUsername,
+    password: adminPassword,
+    role: 'admin',
   })
-  log(`user    admin     ${admin.username} (id ${admin.id})`)
+  const editor = await ensureUser(payload, { ...EDITOR, role: 'editor' })
+  const resident = await ensureUser(payload, { ...RESIDENT, role: 'resident' })
 
-  const editor = await payload.create({
-    collection: 'users',
-    data: {
-      name: EDITOR.name,
-      username: EDITOR.username,
-      password: EDITOR.password,
-      role: 'editor',
-    },
-  })
-  log(`user    editor    ${editor.username} (id ${editor.id})`)
-
-  const resident = await payload.create({
-    collection: 'users',
-    data: {
-      name: RESIDENT.name,
-      username: RESIDENT.username,
-      password: RESIDENT.password,
-      role: 'resident',
-    },
-  })
-  log(`user    resident  ${resident.username} (id ${resident.id})`)
-
-  // ── 2. Categories (slug auto-generates from name) ─────────────────────────
+  // ── 2. Categories ─────────────────────────────────────────────────────────
   const categories: Record<string, number> = {}
   for (const name of ['Decrees', 'Gazette', 'Culture', 'Public Works']) {
-    const category = await payload.create({ collection: 'categories', data: { name } })
+    const category = await ensureCategory(payload, name)
     categories[name] = category.id
-    log(`category ${category.slug}  (id ${category.id})`)
   }
 
   // ── 3. Media ──────────────────────────────────────────────────────────────
-  const monument = await payload.create({
-    collection: 'media',
-    data: { alt: 'The National Monument of Condoria — stone obelisk with gilded pyramidion' },
-    filePath: path.join(assetsDir, 'condoria-monument.glb'),
-  })
-  log(`media   ${monument.filename}  (id ${monument.id}, ${monument.mimeType})`)
+  const monument = await ensureMedia(
+    payload,
+    'The National Monument of Condoria — stone obelisk with gilded pyramidion',
+    path.join(assetsDir, 'condoria-monument.glb'),
+  )
 
   log('generating banner images with sharp…')
   const banners = await generateBannerImages(assetsDir)
-
-  const foundingBanner = await payload.create({
-    collection: 'media',
-    data: { alt: banners.foundingDay.alt },
-    filePath: banners.foundingDay.filePath,
-  })
-  log(`media   ${foundingBanner.filename}  (id ${foundingBanner.id}, ${foundingBanner.mimeType})`)
-
-  const roadBanner = await payload.create({
-    collection: 'media',
-    data: { alt: banners.northRoad.alt },
-    filePath: banners.northRoad.filePath,
-  })
-  log(`media   ${roadBanner.filename}  (id ${roadBanner.id}, ${roadBanner.mimeType})`)
+  const foundingBanner = await ensureMedia(payload, banners.foundingDay.alt, banners.foundingDay.filePath)
+  const roadBanner = await ensureMedia(payload, banners.northRoad.alt, banners.northRoad.filePath)
 
   // ── 4. Articles ───────────────────────────────────────────────────────────
-  const charter = await payload.create({
-    collection: 'articles',
+  await ensureArticle(payload, {
+    title: 'The Charter of Condoria',
     data: {
-      title: 'The Charter of Condoria',
       excerpt: excerpts.charter,
       content: charterContent(),
       author: admin.id,
@@ -156,12 +209,10 @@ async function seed(payload: Payload): Promise<void> {
       _status: 'published',
     },
   })
-  log(`article ${charter.slug}  (pinned, published)`)
 
-  const monumentArticle = await payload.create({
-    collection: 'articles',
+  await ensureArticle(payload, {
+    title: 'The National Monument, Restored',
     data: {
-      title: 'The National Monument, Restored',
       excerpt: excerpts.monument,
       content: monumentContent(monument.id),
       author: editor.id,
@@ -170,12 +221,10 @@ async function seed(payload: Payload): Promise<void> {
       _status: 'published',
     },
   })
-  log(`article ${monumentArticle.slug}  (published, 3D model block)`)
 
-  const foundingDay = await payload.create({
-    collection: 'articles',
+  await ensureArticle(payload, {
+    title: 'Founding Day: How Condoria Came To Be',
     data: {
-      title: 'Founding Day: How Condoria Came To Be',
       excerpt: excerpts.foundingDay,
       content: foundingDayContent(foundingBanner.id),
       author: editor.id,
@@ -185,12 +234,10 @@ async function seed(payload: Payload): Promise<void> {
       _status: 'published',
     },
   })
-  log(`article ${foundingDay.slug}  (published)`)
 
-  const northRoad = await payload.create({
-    collection: 'articles',
+  await ensureArticle(payload, {
+    title: 'The Great North Road Opens',
     data: {
-      title: 'The Great North Road Opens',
       excerpt: excerpts.northRoad,
       content: northRoadContent(foundingBanner.id, roadBanner.id),
       author: admin.id,
@@ -200,13 +247,11 @@ async function seed(payload: Payload): Promise<void> {
       _status: 'published',
     },
   })
-  log(`article ${northRoad.slug}  (published)`)
 
-  const lanternFestival = await payload.create({
-    collection: 'articles',
+  await ensureArticle(payload, {
+    title: 'Proposal: Lantern Festival on the South Quay',
     draft: true,
     data: {
-      title: 'Proposal: Lantern Festival on the South Quay',
       excerpt: excerpts.lanternFestival,
       content: lanternFestivalContent(),
       author: resident.id,
@@ -214,30 +259,23 @@ async function seed(payload: Payload): Promise<void> {
       _status: 'draft',
     },
   })
-  log(`article ${lanternFestival.slug}  (DRAFT by resident)`)
 
   // ── 5. Pages ──────────────────────────────────────────────────────────────
-  const about = await payload.create({
-    collection: 'pages',
-    data: {
-      title: 'About Condoria',
-      slug: 'about',
-      content: aboutContent(),
-      _status: 'published',
-    },
+  await ensurePage(payload, 'about', {
+    title: 'About Condoria',
+    content: aboutContent(),
+    _status: 'published',
   })
-  log(`page    ${about.slug}  (published)`)
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const serverURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  if (createdCount === 0) {
+    log('Everything already present — nothing to do.')
+    return
+  }
   console.log(`
 [seed] ────────────────────────────────────────────────────────────
-[seed] The Nation of Condoria is seeded.
-[seed]   users       3  (1 admin, 1 editor, 1 resident)
-[seed]   categories  4  (Decrees, Gazette, Culture, Public Works)
-[seed]   media       3  (monument .glb → ${monument.mimeType}, 2 banners)
-[seed]   articles    5  (4 published — one with the 3D model block — 1 resident draft)
-[seed]   pages       1  (About Condoria)
+[seed] The Nation of Condoria is seeded (${createdCount} entries created this run).
 [seed]
 [seed] Sign in:  ${serverURL}/admin
 [seed]   username: ${adminUsername}  (password: your SEED_ADMIN_PASSWORD)
@@ -256,5 +294,6 @@ try {
   process.exit(0)
 } catch (error) {
   console.error('[seed] FAILED:', error)
+  console.error('[seed] The seed is convergent — fix the cause and re-run; completed entries are kept.')
   process.exit(1)
 }

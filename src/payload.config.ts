@@ -34,6 +34,11 @@ const db =
           connectionString: process.env.DATABASE_URL || '',
         },
         migrationDir: path.resolve(dirname, 'migrations'),
+        // Never dev-push schema into Postgres. Push marks the database as
+        // dev-managed, after which `payload migrate` offers only a
+        // drop-and-replay ("data loss will occur"). Postgres schema changes
+        // go through migration files: pnpm prod migrate:create → pnpm ship.
+        push: false,
       })
     : sqliteAdapter({
         client: {

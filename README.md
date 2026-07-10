@@ -79,10 +79,12 @@ and five articles that exercise every content block — including
 orbit in the browser, and a draft article by the resident account demonstrating
 the review workflow.
 
-The seed is **idempotent**: if the admin user already exists it exits without
-touching anything. To reseed locally, delete `condoria.db` (and optionally the
-`./media` directory) and run `pnpm seed` again. A read-only check of the seeded
-content is available with:
+The seed is **convergent**: every entry (user, category, media item, article,
+page) is looked up by a natural key and created only if missing, so re-running
+completes anything a failed run left out and never duplicates or overwrites
+what exists. To rebuild locally from scratch, delete `condoria.db` (and
+optionally `./media`) and run `pnpm seed` again. A read-only check of the
+seeded content is available with:
 
 ```sh
 pnpm payload run src/seed/verify.ts
@@ -143,21 +145,32 @@ The database is selected by `DATABASE_ADAPTER` in `.env`:
 > **SQLite and Postgres are not interchangeable.** The two adapters generate
 > different SQL, and SQLite dev mode never writes migration files — so a
 > project that works locally has, by default, **no migrations for Postgres at
-> all**. Before your first production deploy you must test against a real Neon
-> database:
+> all**. Postgres schema changes always travel as migration files:
 >
-> 1. In `.env`, set `DATABASE_ADAPTER=postgres` and `DATABASE_URL` to your Neon
->    connection string.
-> 2. Run `pnpm payload migrate:create` to generate the initial migration into
->    `src/migrations/`.
-> 3. Run `pnpm payload migrate` to apply it, then boot the app (`pnpm dev`) and
->    verify.
-> 4. **Commit `src/migrations/`.** Repeat `migrate:create` after every future
->    schema change.
+> 1. Keep production credentials in `.env.ship` (copy `.env.ship.example`);
+>    **`.env` stays on SQLite.**
+> 2. After any schema change (collections, fields, blocks), run
+>    `pnpm prod migrate:create my-change-name` — it diffs against
+>    `src/migrations/` and writes a new migration.
+> 3. **Commit `src/migrations/`**, then `pnpm ship` (which runs
+>    `payload migrate` against Neon before pushing).
 >
 > Content does **not** transfer between adapters automatically — the SQLite
-> file and the Postgres database are separate worlds. Re-run `pnpm seed`
-> against Postgres (with strong `SEED_*` values) or migrate data yourself.
+> file and the Postgres database are separate worlds. Production content comes
+> from `pnpm ship`'s seed step or from the production admin panel.
+
+> [!CAUTION]
+> **Never point `.env` (and therefore `pnpm dev`) at the production database.**
+> Dev mode *pushes* schema straight into the database and stamps it as
+> dev-managed; from then on `payload migrate` offers only "data loss will
+> occur" (drop everything and replay migrations) — that prompt means the
+> database was dev-pushed at some point. The Postgres adapter has `push` (dev
+> schema-push) disabled in `payload.config.ts` as a guard, and the production
+> scripts read `.env.ship` instead of `.env`, so following the normal workflow
+> can't trigger it. If you ever see the prompt on a database whose content you
+> care about, answer **no** and remove the dev stamp instead:
+> `DELETE FROM payload_migrations WHERE batch = -1;` (Neon SQL editor) — safe
+> as long as your collections match the committed migrations.
 
 ## Deploying to production (Vercel + Neon + Vercel Blob)
 
@@ -170,12 +183,17 @@ pnpm ship            # migrate Neon → seed (if needed) → push main (Vercel b
 pnpm ship --dry-run  # preview what would run, execute nothing
 ```
 
-Every step is idempotent, so `pnpm ship` is always safe to re-run: migrations
-apply only if pending, the seed exits untouched if production is already
-seeded, and the push is a no-op when main is up to date. The script refuses
-to run off the `main` branch or against a non-Postgres `DATABASE_ADAPTER`,
-and it skips the seed step (loudly) if `BLOB_READ_WRITE_TOKEN` is missing
-from your `.env`.
+Production credentials come from **`.env.ship`** (git-ignored — copy
+`.env.ship.example`); `.env` itself stays on local SQLite. Every step is
+idempotent, so `pnpm ship` is always safe to re-run: migrations apply only if
+pending, the convergent seed only creates what's missing, and the push is a
+no-op when main is up to date. The script refuses to run off the `main`
+branch, and it skips the seed step (loudly) if `BLOB_READ_WRITE_TOKEN` is
+missing from `.env.ship`.
+
+For ad-hoc Payload CLI commands against production (status checks, creating
+migrations, the verify script) use `pnpm prod <args>`, e.g.
+`pnpm prod migrate:status` or `pnpm prod run src/seed/verify.ts`.
 
 ### One-time setup
 
@@ -204,11 +222,11 @@ from your `.env`.
    `pnpm payload migrate`. (Alternatively add it to the build step:
    `pnpm payload migrate && pnpm build`.) Migration files must already exist —
    see the warning above.
-6. **Seed production**: locally, point `.env` at Neon
-   (`DATABASE_ADAPTER=postgres`, `DATABASE_URL=…`, plus `BLOB_READ_WRITE_TOKEN`
-   so the monument model and banners upload to Blob), set **strong**
-   `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`, and run `pnpm seed`. Change
-   the demo account passwords immediately afterwards, or delete those accounts.
+6. **Create `.env.ship`** from `.env.ship.example`: the Neon `DATABASE_URL`,
+   the Blob token (so the monument model and banners upload to Blob), and
+   **strong** `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`. Then `pnpm ship`
+   migrates, seeds and deploys in one go. Change the demo account passwords
+   immediately after the first seed, or delete those accounts.
 7. Deploy, sign in at `https://condoria.vercel.app/admin`, and raise the flag.
 
 ## Extending the CMS with custom blocks
@@ -289,6 +307,7 @@ components**, which plain blocks do not.)
 | `pnpm typecheck`          | `tsc --noEmit`.                                             |
 | `pnpm seed`               | Seed the database with the demo nation (idempotent).        |
 | `pnpm ship`               | Deploy: migrate Neon, seed if needed, push main (`--dry-run` to preview). |
+| `pnpm prod <args>`        | Any Payload CLI command against production, e.g. `pnpm prod migrate:status`. |
 | `pnpm payload <cmd>`      | Payload CLI (`migrate`, `migrate:create`, `run <script>`…). |
 | `pnpm generate:types`     | Regenerate `src/payload-types.ts` from the config.          |
 | `pnpm generate:importmap` | Regenerate the admin import map (custom admin components).  |

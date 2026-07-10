@@ -14,8 +14,10 @@
  * Pushing main is what actually deploys: the Vercel Git integration builds
  * and releases https://condoria.vercel.app from the main branch.
  */
-import 'dotenv/config'
 import { execSync, spawnSync } from 'node:child_process'
+import { loadShipEnv } from './ship-env.mjs'
+
+loadShipEnv()
 
 const DRY_RUN = process.argv.includes('--dry-run')
 const PROD_URL = 'https://condoria.vercel.app'
@@ -58,13 +60,13 @@ if (branch !== 'main') {
 }
 
 if (process.env.DATABASE_ADAPTER !== 'postgres') {
-  fail(`DATABASE_ADAPTER is "${process.env.DATABASE_ADAPTER ?? ''}" — this script targets PRODUCTION (Neon).`, 'Set DATABASE_ADAPTER=postgres and DATABASE_URL to your Neon connection string in .env. Local sqlite dev never needs shipping.')
+  fail(`DATABASE_ADAPTER is "${process.env.DATABASE_ADAPTER ?? ''}" — this script targets PRODUCTION (Neon).`, 'Set DATABASE_ADAPTER=postgres in .env.ship (production credentials live there, not in .env).')
 }
 if (!process.env.DATABASE_URL) {
-  fail('DATABASE_URL is not set in .env.', 'Paste your Neon connection string (Neon dashboard → Connect).')
+  fail('DATABASE_URL is not set in .env.ship.', 'Paste your Neon connection string (Neon dashboard → Connect).')
 }
 if (!process.env.PAYLOAD_SECRET) {
-  fail('PAYLOAD_SECRET is not set in .env.', 'Any long random string works locally; it only needs to match nothing.')
+  fail('PAYLOAD_SECRET is not set (checked .env.ship, then .env).', 'Any long random string works locally; it only needs to match nothing.')
 }
 
 const dirty = git('status --porcelain')
