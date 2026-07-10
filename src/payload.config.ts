@@ -74,14 +74,19 @@ export default buildConfig({
   db,
   sharp,
   plugins: [
-    // File storage: local ./media directory unless a Vercel Blob token is set.
-    ...(process.env.BLOB_READ_WRITE_TOKEN
-      ? [
-          vercelBlobStorage({
-            collections: { media: true },
-            token: process.env.BLOB_READ_WRITE_TOKEN,
-          }),
-        ]
-      : []),
+    // File storage: Vercel Blob in production, local ./media directory in dev.
+    // The plugin is ALWAYS in the array and merely `enabled`-gated on the token
+    // (no token -> disabled -> falls back to local storage). It must never be
+    // conditionally omitted: when omitted, `payload generate:importmap` does not
+    // emit the Blob client upload handler, and then wherever the token IS set
+    // (production/Vercel) Payload cannot resolve that admin component and the
+    // ENTIRE admin panel renders blank. Regenerate the import map with the token
+    // present via `pnpm prod generate:importmap` (loads .env.ship), never with a
+    // bare `pnpm generate:importmap` in a token-less shell.
+    vercelBlobStorage({
+      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      collections: { media: true },
+      token: process.env.BLOB_READ_WRITE_TOKEN || '',
+    }),
   ],
 })
