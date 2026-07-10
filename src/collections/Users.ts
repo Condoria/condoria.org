@@ -6,10 +6,19 @@ export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
     useAsTitle: 'name',
-    defaultColumns: ['name', 'email', 'role'],
+    defaultColumns: ['name', 'username', 'role'],
     group: 'Administration',
   },
-  auth: true,
+  // Pure username/password auth. The nation owns no mail domain and no email
+  // adapter is configured, so accounts carry no email address at all; admins
+  // reset forgotten passwords from this panel (Users → edit → password).
+  auth: {
+    loginWithUsername: {
+      allowEmailLogin: false,
+      requireEmail: false,
+      requireUsername: true,
+    },
+  },
   access: {
     create: isAdmin,
     delete: isAdmin,

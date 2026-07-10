@@ -28,20 +28,19 @@ import { generateBannerImages } from './images'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const assetsDir = path.resolve(here, 'assets')
 
-// All seed accounts live on condoria.example: the .example TLD is IANA-reserved
-// and can never receive real mail. (No email adapter is configured either —
-// Payload writes emails to the console instead of sending.)
-const DEFAULT_ADMIN_EMAIL = 'admin@condoria.example'
+// Accounts are username-only: no email addresses exist anywhere in the system
+// (the nation owns no mail domain, and no email adapter is configured).
+const DEFAULT_ADMIN_USERNAME = 'chancellor'
 const DEFAULT_ADMIN_PASSWORD = 'condoria-dev-2026'
 
 /** Demo accounts (documented in the README — change these passwords!). */
 const EDITOR = {
-  email: 'editor@condoria.example',
+  username: 'keeper',
   password: 'condoria-editor-2026',
   name: 'Keeper of Records',
 } as const
 const RESIDENT = {
-  email: 'resident@condoria.example',
+  username: 'resident',
   password: 'condoria-resident-2026',
   name: 'A Resident of Condoria',
 } as const
@@ -50,23 +49,23 @@ const log = (message: string) => console.log(`[seed] ${message}`)
 
 async function seed(payload: Payload): Promise<void> {
   // ── Credentials ───────────────────────────────────────────────────────────
-  let adminEmail = process.env.SEED_ADMIN_EMAIL
+  let adminUsername = process.env.SEED_ADMIN_USERNAME
   let adminPassword = process.env.SEED_ADMIN_PASSWORD
-  if (!adminEmail || !adminPassword) {
+  if (!adminUsername || !adminPassword) {
     console.warn(
-      '\n[seed] WARNING: SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD are not set in the\n' +
-        `[seed] environment. Falling back to the well-known dev defaults\n` +
-        `[seed] (${DEFAULT_ADMIN_EMAIL} / ${DEFAULT_ADMIN_PASSWORD}).\n` +
+      '\n[seed] WARNING: SEED_ADMIN_USERNAME / SEED_ADMIN_PASSWORD are not set in\n' +
+        `[seed] the environment. Falling back to the well-known dev defaults\n` +
+        `[seed] (${DEFAULT_ADMIN_USERNAME} / ${DEFAULT_ADMIN_PASSWORD}).\n` +
         '[seed] NEVER seed a production database without setting strong values.\n',
     )
-    adminEmail = adminEmail || DEFAULT_ADMIN_EMAIL
+    adminUsername = adminUsername || DEFAULT_ADMIN_USERNAME
     adminPassword = adminPassword || DEFAULT_ADMIN_PASSWORD
   }
 
   // ── Idempotency check ─────────────────────────────────────────────────────
   const existing = await payload.find({
     collection: 'users',
-    where: { email: { equals: adminEmail } },
+    where: { username: { equals: adminUsername } },
     limit: 1,
   })
   if (existing.totalDocs > 0) {
@@ -81,29 +80,34 @@ async function seed(payload: Payload): Promise<void> {
     collection: 'users',
     data: {
       name: 'Chancellor of Condoria',
-      email: adminEmail,
+      username: adminUsername,
       password: adminPassword,
       role: 'admin',
     },
   })
-  log(`user    admin     ${admin.email} (id ${admin.id})`)
+  log(`user    admin     ${admin.username} (id ${admin.id})`)
 
   const editor = await payload.create({
     collection: 'users',
-    data: { name: EDITOR.name, email: EDITOR.email, password: EDITOR.password, role: 'editor' },
+    data: {
+      name: EDITOR.name,
+      username: EDITOR.username,
+      password: EDITOR.password,
+      role: 'editor',
+    },
   })
-  log(`user    editor    ${editor.email} (id ${editor.id})`)
+  log(`user    editor    ${editor.username} (id ${editor.id})`)
 
   const resident = await payload.create({
     collection: 'users',
     data: {
       name: RESIDENT.name,
-      email: RESIDENT.email,
+      username: RESIDENT.username,
       password: RESIDENT.password,
       role: 'resident',
     },
   })
-  log(`user    resident  ${resident.email} (id ${resident.id})`)
+  log(`user    resident  ${resident.username} (id ${resident.id})`)
 
   // ── 2. Categories (slug auto-generates from name) ─────────────────────────
   const categories: Record<string, number> = {}
@@ -236,8 +240,8 @@ async function seed(payload: Payload): Promise<void> {
 [seed]   pages       1  (About Condoria)
 [seed]
 [seed] Sign in:  ${serverURL}/admin
-[seed]   ${adminEmail}  (password: your SEED_ADMIN_PASSWORD)
-[seed]   Demo accounts (change these passwords!): ${EDITOR.email}, ${RESIDENT.email}
+[seed]   username: ${adminUsername}  (password: your SEED_ADMIN_PASSWORD)
+[seed]   Demo accounts (change these passwords!): ${EDITOR.username}, ${RESIDENT.username}
 [seed]
 [seed] Visit:    ${serverURL}/           — the national gazette
 [seed]           ${serverURL}/articles   — all published articles

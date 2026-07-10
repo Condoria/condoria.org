@@ -43,30 +43,32 @@ Then visit:
 
 - **http://localhost:3000** — the public site
 - **http://localhost:3000/admin** — the admin panel; sign in with the
-  `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` from your `.env`
+  `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD` from your `.env`
 
 The seed also creates two **demo accounts** so every role can be tried
 immediately:
 
-| Account                     | Role     | Password                |
-| --------------------------- | -------- | ----------------------- |
-| `editor@condoria.example`   | editor   | `condoria-editor-2026`  |
-| `resident@condoria.example` | resident | `condoria-resident-2026`|
+| Username   | Role     | Password                |
+| ---------- | -------- | ----------------------- |
+| `keeper`   | editor   | `condoria-editor-2026`  |
+| `resident` | resident | `condoria-resident-2026`|
 
 > [!IMPORTANT]
 > These are published demo credentials. **Change the admin password and both
 > demo account passwords immediately** after first login (Admin → Users), and
 > never run the seed against a shared database with the defaults.
 
-### A note on email
+### No email, anywhere
 
-This project deliberately configures **no email adapter**, so Payload writes
-every email (e.g. password resets) to the **server console instead of sending
-it** — no real mail ever leaves the app. All seed accounts additionally use
-the `condoria.example` domain, which is IANA-reserved and cannot receive mail
-(the nation does not own a mail domain; `condoria.org` belongs to someone
-else). If you ever add a real email adapter, first move every user to email
-addresses on a domain you actually control.
+Accounts are **username + password only** (`auth.loginWithUsername` in
+`src/collections/Users.ts`): users carry no email address at all, because the
+nation owns no mail domain (`condoria.org` belongs to someone else). No email
+adapter is configured either — if anything ever did try to send mail, Payload
+would write it to the **server console instead of sending**. Forgotten
+password? An admin sets a new one in the panel (Users → edit → New Password).
+If you ever want real email (and email login), you'd need to own a domain,
+add an adapter such as `@payloadcms/email-nodemailer`, and re-enable email on
+the Users collection — until then, nothing can leave the app.
 
 ### What the seed creates
 
@@ -113,7 +115,8 @@ Collections (`src/collections/`):
 - **Media** — uploads with required alt text; images get `thumbnail`/`card`/
   `hero` renditions; also accepts `.glb` 3D models (`model/gltf-binary`).
 - **Categories** — name + auto-generated slug.
-- **Users** — name, email, role (`resident | editor | admin`).
+- **Users** — name, username, role (`resident | editor | admin`); no email
+  (see [No email, anywhere](#no-email-anywhere)).
 
 Article and page content is a Lexical rich-text field with six custom blocks
 (schema in `src/blocks/config.ts`, renderers in `src/blocks/components/`):
@@ -186,8 +189,8 @@ The database is selected by `DATABASE_ADAPTER` in `.env`:
 6. **Seed production**: locally, point `.env` at Neon
    (`DATABASE_ADAPTER=postgres`, `DATABASE_URL=…`, plus `BLOB_READ_WRITE_TOKEN`
    so the monument model and banners upload to Blob), set **strong**
-   `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, and run `pnpm seed`. Change the
-   demo account passwords immediately afterwards, or delete those accounts.
+   `SEED_ADMIN_USERNAME` / `SEED_ADMIN_PASSWORD`, and run `pnpm seed`. Change
+   the demo account passwords immediately afterwards, or delete those accounts.
 7. Deploy, sign in at `https://condoria.vercel.app/admin`, and raise the flag.
 
 ## Extending the CMS with custom blocks
