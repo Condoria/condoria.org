@@ -161,6 +161,24 @@ The database is selected by `DATABASE_ADAPTER` in `.env`:
 
 ## Deploying to production (Vercel + Neon + Vercel Blob)
 
+### Day-to-day deploys: `pnpm ship`
+
+Once the one-time setup below is done, deploying is a single command:
+
+```sh
+pnpm ship            # migrate Neon → seed (if needed) → push main (Vercel builds it)
+pnpm ship --dry-run  # preview what would run, execute nothing
+```
+
+Every step is idempotent, so `pnpm ship` is always safe to re-run: migrations
+apply only if pending, the seed exits untouched if production is already
+seeded, and the push is a no-op when main is up to date. The script refuses
+to run off the `main` branch or against a non-Postgres `DATABASE_ADAPTER`,
+and it skips the seed step (loudly) if `BLOB_READ_WRITE_TOKEN` is missing
+from your `.env`.
+
+### One-time setup
+
 1. **Create a Neon project** (or any hosted Postgres). Copy the pooled
    connection string — this is your production `DATABASE_URL`.
 2. **Create a Vercel Blob store** (Vercel dashboard → Storage → Blob) and copy
@@ -270,6 +288,7 @@ components**, which plain blocks do not.)
 | `pnpm lint`               | ESLint.                                                     |
 | `pnpm typecheck`          | `tsc --noEmit`.                                             |
 | `pnpm seed`               | Seed the database with the demo nation (idempotent).        |
+| `pnpm ship`               | Deploy: migrate Neon, seed if needed, push main (`--dry-run` to preview). |
 | `pnpm payload <cmd>`      | Payload CLI (`migrate`, `migrate:create`, `run <script>`…). |
 | `pnpm generate:types`     | Regenerate `src/payload-types.ts` from the config.          |
 | `pnpm generate:importmap` | Regenerate the admin import map (custom admin components).  |
