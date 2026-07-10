@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 import type { Article } from '@/payload-types'
 
-import { formatDate } from './format'
+import { articleHref, formatDate } from './format'
 
 /** A small oxide wax-seal mark for pinned documents of state. */
 function Seal({ className }: { className?: string }) {
@@ -21,7 +21,7 @@ function Seal({ className }: { className?: string }) {
 export function DocumentCard({ article }: { article: Article }) {
   const dateTime = article.publishedAt ?? article.createdAt
   const date = formatDate(dateTime)
-  const href = article.slug ? `/articles/${article.slug}` : '/articles'
+  const href = articleHref(article)
 
   return (
     <article className="group relative flex flex-col border border-parchment-300 bg-parchment-100 p-6 transition-colors hover:border-gold-400">

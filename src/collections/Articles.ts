@@ -59,7 +59,7 @@ export const Articles: CollectionConfig = {
   slug: 'articles',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'author', 'category', '_status', 'publishedAt'],
+    defaultColumns: ['title', 'section', 'author', 'category', '_status', 'publishedAt'],
     group: 'Content',
     description: 'News, decrees and documents of the Nation of Condoria.',
   },
@@ -102,6 +102,21 @@ export const Articles: CollectionConfig = {
       }),
     },
     slugField('title'),
+    {
+      name: 'section',
+      type: 'select',
+      required: true,
+      defaultValue: 'government',
+      options: [
+        { label: 'Government Gazette', value: 'government' },
+        { label: 'Condor Times', value: 'times' },
+      ],
+      admin: {
+        position: 'sidebar',
+        description:
+          'Which publication carries this article: the state Gazette (/gov) or the independent Condor Times (/times).',
+      },
+    },
     {
       name: 'publishedAt',
       type: 'date',

@@ -35,8 +35,42 @@
   --color-oxide-700: #7c2d21;
   --color-oxide-600: #8a3226;
 
+  /*
+   * National flag colours — maroon #441313 and gold #c9a52f.
+   * Used as accents in the government look, and as the Condor Times' core palette.
+   */
+  --color-flag-brown: #441313;
+  --color-flag-gold: #c9a52f;
+
+  /* Condor Times — independent digital-news palette (maroon primary, gold accent). */
+  --color-maroon-950: #1c0808;
+  --color-maroon-900: #2b0d0d;
+  --color-maroon-800: #441313;
+  --color-maroon-700: #591c1c;
+  --color-maroon-600: #74282a;
+  --color-maroon-500: #8f3a3a;
+  --color-maroon-300: #c88a8a;
+  --color-maroon-200: #e6c8c8;
+  --color-maroon-100: #f4e6e6;
+
+  --color-tgold-700: #8a6d18;
+  --color-tgold-600: #a8871f;
+  --color-tgold-500: #c9a52f;
+  --color-tgold-400: #d9bb55;
+  --color-tgold-300: #e7d087;
+
+  /* Warm near-neutral ground for the Times (light news surface). */
+  --color-news-50: #faf8f5;
+  --color-news-100: #f4efe8;
+  --color-news-200: #e6ddd1;
+  --color-news-300: #d3c6b4;
+  --color-news-500: #8a8079;
+  --color-news-700: #453c36;
+  --color-news-900: #1a1310;
+
   --font-display: var(--font-fraunces), 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-body: var(--font-public-sans), 'Public Sans', system-ui, -apple-system, sans-serif;
+  --font-news: var(--font-archivo), 'Archivo', 'Helvetica Neue', Arial, sans-serif;
 }
 
 @layer base {

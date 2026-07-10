@@ -1,4 +1,17 @@
-import type { Media } from '@/payload-types'
+import type { Article, Media } from '@/payload-types'
+
+/**
+ * Canonical public URL for an article, routed by its publication:
+ *  - Condor Times pieces live at /times/[slug]
+ *  - Government Gazette pieces live at /gov/articles/[slug]
+ */
+export function articleHref(
+  article: Pick<Article, 'slug'> & { section?: Article['section'] | null },
+): string {
+  const slug = article.slug
+  if (article.section === 'times') return slug ? `/times/${slug}` : '/times'
+  return slug ? `/gov/articles/${slug}` : '/gov/articles'
+}
 
 /**
  * Small render-side helpers shared by the site components. Relations coming

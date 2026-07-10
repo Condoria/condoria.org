@@ -3,24 +3,28 @@ import Link from 'next/link'
 import { Crest } from './Crest'
 
 const NAV_LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/articles', label: 'Articles' },
-  { href: '/about', label: 'About' },
+  { href: '/gov', label: 'Home' },
+  { href: '/gov/articles', label: 'Gazette' },
+  { href: '/gov/about', label: 'About' },
 ] as const
 
 /**
- * The masthead bar: pine ground, parchment text, crest and wordmark, with a
- * gold hairline beneath. Server-only; on narrow screens the links simply wrap.
+ * The government masthead: pine ground, parchment text, crest and wordmark.
+ * Topped by the national ribbon in the flag's maroon and gold, and carrying a
+ * standing link across to the independent Condor Times.
  */
 export function Nav() {
   return (
     <header className="border-b border-gold-400/70 bg-pine-900 text-parchment-100">
+      {/* National ribbon — the flag's maroon and gold. */}
+      <div aria-hidden="true" className="h-[3px] bg-flag-brown" />
+      <div aria-hidden="true" className="h-px bg-flag-gold" />
       <nav
         aria-label="Primary"
         className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-10 gap-y-3 px-6 py-4"
       >
         <Link
-          href="/"
+          href="/gov"
           className="group flex items-center gap-3.5 text-parchment-50 focus-visible:outline-gold-300"
         >
           <Crest className="h-10 w-auto shrink-0 text-gold-300 transition-colors group-hover:text-gold-200" />
@@ -44,6 +48,15 @@ export function Nav() {
               </Link>
             </li>
           ))}
+          <li>
+            <Link
+              href="/times"
+              className="inline-flex items-center gap-1.5 text-[13px] font-medium uppercase tracking-[0.18em] text-tgold-300 transition-colors hover:text-tgold-400 focus-visible:outline-gold-300"
+            >
+              Condor Times
+              <span aria-hidden="true">↗</span>
+            </Link>
+          </li>
         </ul>
       </nav>
     </header>

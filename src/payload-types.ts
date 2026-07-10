@@ -154,6 +154,10 @@ export interface Article {
    */
   slug?: string | null;
   /**
+   * Which publication carries this article: the state Gazette (/gov) or the independent Condor Times (/times).
+   */
+  section: 'government' | 'times';
+  /**
    * Set automatically on first publish; can be backdated.
    */
   publishedAt?: string | null;
@@ -390,6 +394,7 @@ export interface ArticlesSelect<T extends boolean = true> {
   excerpt?: T;
   content?: T;
   slug?: T;
+  section?: T;
   publishedAt?: T;
   author?: T;
   category?: T;

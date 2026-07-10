@@ -46,8 +46,11 @@ function internalDocToHref({ linkNode }: { linkNode: SerializedLinkNode }): stri
   if (!doc || !doc.value || typeof doc.value !== 'object') return '#'
   const slug = typeof doc.value.slug === 'string' && doc.value.slug.length > 0 ? doc.value.slug : null
   if (!slug) return '#'
-  if (doc.relationTo === 'articles') return `/articles/${slug}`
-  if (doc.relationTo === 'pages') return `/${slug}`
+  if (doc.relationTo === 'articles') {
+    const section = 'section' in doc.value && doc.value.section === 'times' ? 'times' : 'government'
+    return section === 'times' ? `/times/${slug}` : `/gov/articles/${slug}`
+  }
+  if (doc.relationTo === 'pages') return `/gov/${slug}`
   return '#'
 }
 
@@ -68,21 +71,19 @@ const converters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => 
 })
 
 /**
- * Gazette typography for the default Lexical nodes.
+ * Prose typography for the default Lexical nodes, in two tones. The default
+ * JSX converters emit classless tags (p, h1–h6, a, blockquote, hr, img), while
+ * every element from our block components carries a class — so scoping these
+ * selectors with `:not([class])` styles the prose without leaking into blocks.
+ * Lists are the exception: the library puts `list-*` classes on ul/ol.
  *
- * The default JSX converters emit classless tags (p, h1–h6, a, blockquote,
- * hr, img), while every element rendered by our block components carries a
- * class — so scoping these selectors with `:not([class])` styles the prose
- * without leaking into the blocks. Lists are the exception: the library puts
- * `list-*` classes on ul/ol, so those are targeted directly.
+ * NB: both variants are written out as literal class strings — Tailwind's
+ * scanner only sees literals, so the tone cannot be interpolated.
  */
-const TYPOGRAPHY = cn(
-  // Headings — display serif, deep pine.
-  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:font-display',
+const STRUCTURE = cn(
   '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:font-semibold',
   '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:tracking-tight',
   '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:leading-tight',
-  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:text-pine-900',
   '[&_h1:not([class])]:text-4xl',
   '[&_h2:not([class])]:text-3xl',
   '[&_h3:not([class])]:text-2xl',
@@ -94,24 +95,14 @@ const TYPOGRAPHY = cn(
   '[&_:is(h3,h4):not([class])]:mb-3',
   '[&_:is(h5,h6):not([class])]:mt-6',
   '[&_:is(h5,h6):not([class])]:mb-2',
-  // Body copy.
   '[&_p:not([class])]:my-5',
   '[&_p:not([class])]:leading-relaxed',
-  // Links — pine with a gold underline.
-  '[&_a:not([class])]:text-pine-700',
   '[&_a:not([class])]:underline',
-  '[&_a:not([class])]:decoration-gold-400',
   '[&_a:not([class])]:underline-offset-2',
-  '[&_a:not([class]):hover]:text-pine-800',
-  '[&_a:not([class]):hover]:decoration-gold-600',
-  // Native blockquotes — quiet gold left rule.
   '[&_blockquote:not([class])]:my-6',
   '[&_blockquote:not([class])]:border-l-2',
-  '[&_blockquote:not([class])]:border-gold-400',
   '[&_blockquote:not([class])]:pl-5',
-  '[&_blockquote:not([class])]:text-ink-700',
   '[&_blockquote:not([class])]:italic',
-  // Lists — proper markers and indentation, gold markers.
   '[&_ul.list-bullet]:my-5',
   '[&_ul.list-bullet]:list-disc',
   '[&_ul.list-bullet]:pl-6',
@@ -121,32 +112,61 @@ const TYPOGRAPHY = cn(
   '[&_li_ul.list-bullet]:my-1',
   '[&_li_ol.list-number]:my-1',
   '[&_li]:my-1.5',
-  '[&_li::marker]:text-gold-600',
-  // Horizontal rules — a short centered gold divider.
   '[&_hr:not([class])]:mx-auto',
   '[&_hr:not([class])]:my-10',
   '[&_hr:not([class])]:w-24',
-  '[&_hr:not([class])]:border-gold-400',
-  // Inline code.
-  '[&_code:not([class])]:bg-parchment-200',
   '[&_code:not([class])]:px-1',
   '[&_code:not([class])]:py-0.5',
   '[&_code:not([class])]:text-[0.9em]',
-  // Bare upload nodes (default converter) — framed like plates.
   '[&_img:not([class])]:h-auto',
   '[&_img:not([class])]:max-w-full',
   '[&_img:not([class])]:border',
-  '[&_img:not([class])]:border-parchment-300',
   '[&_:is(img,picture):not([class])]:my-8',
   '[&_picture_img:not([class])]:my-0',
-  // Trim the column's outer margins.
   '[&>*:first-child]:mt-0!',
   '[&>*:last-child]:mb-0!',
 )
 
+const GAZETTE_TONE = cn(
+  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:font-display',
+  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:text-pine-900',
+  '[&_a:not([class])]:text-pine-700',
+  '[&_a:not([class])]:decoration-gold-400',
+  '[&_a:not([class]):hover]:text-pine-800',
+  '[&_a:not([class]):hover]:decoration-gold-600',
+  '[&_blockquote:not([class])]:border-gold-400',
+  '[&_blockquote:not([class])]:text-ink-700',
+  '[&_li::marker]:text-gold-600',
+  '[&_hr:not([class])]:border-gold-400',
+  '[&_code:not([class])]:bg-parchment-200',
+  '[&_img:not([class])]:border-parchment-300',
+)
+
+const TIMES_TONE = cn(
+  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:font-display',
+  '[&_:is(h1,h2,h3,h4,h5,h6):not([class])]:text-maroon-800',
+  '[&_a:not([class])]:text-maroon-700',
+  '[&_a:not([class])]:decoration-tgold-500',
+  '[&_a:not([class]):hover]:text-maroon-800',
+  '[&_a:not([class]):hover]:decoration-tgold-600',
+  '[&_blockquote:not([class])]:border-tgold-500',
+  '[&_blockquote:not([class])]:text-news-700',
+  '[&_li::marker]:text-tgold-600',
+  '[&_hr:not([class])]:border-tgold-500',
+  '[&_code:not([class])]:bg-news-100',
+  '[&_img:not([class])]:border-news-200',
+)
+
+const TONES = {
+  gazette: cn(STRUCTURE, GAZETTE_TONE),
+  times: cn(STRUCTURE, TIMES_TONE),
+} as const
+
 type RichTextProps = {
   className?: string
   data: Article['content'] | Page['content'] | null | undefined
+  /** Prose palette: the state Gazette (default) or the Condor Times. */
+  tone?: keyof typeof TONES
 }
 
 /**
@@ -154,11 +174,11 @@ type RichTextProps = {
  * (callout, quote, image, gallery, embed, model3d). Server-safe: the only
  * client code is behind the Model3D block's dynamic import.
  */
-export function RichText({ data, className }: RichTextProps) {
+export function RichText({ data, className, tone = 'gazette' }: RichTextProps) {
   if (!data?.root?.children?.length) return null
 
   return (
-    <div className={cn(TYPOGRAPHY, className)}>
+    <div className={cn(TONES[tone], className)}>
       <PayloadRichText
         converters={converters}
         data={data as SerializedEditorState}

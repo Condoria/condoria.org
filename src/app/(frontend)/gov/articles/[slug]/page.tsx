@@ -16,13 +16,13 @@ type Props = {
 }
 
 export async function generateStaticParams() {
-  const slugs = await getAllArticleSlugs()
+  const slugs = await getAllArticleSlugs('government')
   return slugs.map((slug) => ({ slug }))
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const article = await getArticleBySlug(slug)
+  const article = await getArticleBySlug('government', slug)
   if (!article) return { title: 'Record not found' }
   return {
     title: article.title,
@@ -30,9 +30,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ArticlePage({ params }: Props) {
+export default async function GovArticlePage({ params }: Props) {
   const { slug } = await params
-  const article = await getArticleBySlug(slug)
+  const article = await getArticleBySlug('government', slug)
   if (!article) notFound()
 
   const category =
@@ -99,7 +99,7 @@ export default async function ArticlePage({ params }: Props) {
 
       <footer className="mt-14 border-t border-parchment-300 pt-6">
         <Link
-          href="/articles"
+          href="/gov/articles"
           className="text-sm font-medium text-pine-700 transition-colors hover:text-pine-600"
         >
           ← The Gazette

@@ -16,8 +16,8 @@ export function Pagination({ page, totalPages, hasPrevPage, hasNextPage }: Pagin
   if (totalPages <= 1) return null
 
   // Page 1 keeps a clean URL without the query string.
-  const prevHref = page - 1 <= 1 ? '/articles' : `/articles?page=${page - 1}`
-  const nextHref = `/articles?page=${page + 1}`
+  const prevHref = page - 1 <= 1 ? '/gov/articles' : `/gov/articles?page=${page - 1}`
+  const nextHref = `/gov/articles?page=${page + 1}`
   const linkClasses = 'text-sm font-medium text-pine-700 transition-colors hover:text-pine-600'
   const mutedClasses = 'select-none text-sm text-ink-400/60'
 

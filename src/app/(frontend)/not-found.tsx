@@ -18,11 +18,11 @@ export default function NotFound() {
         been struck from it.
       </p>
       <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-        <LinkButton href="/" variant="primary">
+        <LinkButton href="/gov" variant="primary">
           Return home
         </LinkButton>
         <Link
-          href="/articles"
+          href="/gov/articles"
           className="text-sm font-medium text-pine-700 transition-colors hover:text-pine-600"
         >
           Browse the Gazette →

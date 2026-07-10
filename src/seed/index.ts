@@ -9,9 +9,13 @@ import {
   charterContent,
   excerpts,
   foundingDayContent,
+  keepersOpEdContent,
   lanternFestivalContent,
   monumentContent,
   northRoadContent,
+  quayPricesContent,
+  roadOverrunContent,
+  valeGateTollContent,
 } from './content'
 import { generateBannerImages } from './images'
 
@@ -47,6 +51,12 @@ const RESIDENT = {
   username: 'resident',
   password: 'condoria-resident-2026',
   name: 'A Resident of Condoria',
+} as const
+/** The Condor Times byline — an independent editor, kept distinct from the Gazette. */
+const TIMES_CORRESPONDENT = {
+  username: 'corvin',
+  password: 'condoria-times-2026',
+  name: 'Corvin Vale',
 } as const
 
 const log = (message: string) => console.log(`[seed] ${message}`)
@@ -176,10 +186,11 @@ async function seed(payload: Payload): Promise<void> {
   })
   const editor = await ensureUser(payload, { ...EDITOR, role: 'editor' })
   const resident = await ensureUser(payload, { ...RESIDENT, role: 'resident' })
+  const timesEditor = await ensureUser(payload, { ...TIMES_CORRESPONDENT, role: 'editor' })
 
   // ── 2. Categories ─────────────────────────────────────────────────────────
   const categories: Record<string, number> = {}
-  for (const name of ['Decrees', 'Gazette', 'Culture', 'Public Works']) {
+  for (const name of ['Decrees', 'Gazette', 'Culture', 'Public Works', 'Markets', 'Opinion']) {
     const category = await ensureCategory(payload, name)
     categories[name] = category.id
   }
@@ -260,6 +271,62 @@ async function seed(payload: Payload): Promise<void> {
     },
   })
 
+  // ── 4b. The Condor Times (section: 'times') ───────────────────────────────
+  await ensureArticle(payload, {
+    title: 'Traders Balk as Vale Gate Toll Takes Effect',
+    data: {
+      excerpt: excerpts.valeGateToll,
+      content: valeGateTollContent(),
+      section: 'times',
+      author: timesEditor.id,
+      category: categories['Public Works'],
+      featuredImage: roadBanner.id,
+      pinned: true,
+      publishedAt: '2026-07-08T07:30:00.000Z',
+      _status: 'published',
+    },
+  })
+
+  await ensureArticle(payload, {
+    title: 'The North Road Ran Long, and Ran Over',
+    data: {
+      excerpt: excerpts.roadOverrun,
+      content: roadOverrunContent(),
+      section: 'times',
+      author: timesEditor.id,
+      category: categories['Public Works'],
+      publishedAt: '2026-07-05T09:00:00.000Z',
+      _status: 'published',
+    },
+  })
+
+  await ensureArticle(payload, {
+    title: 'Quay Prices Climb as the Stores Run Thin',
+    data: {
+      excerpt: excerpts.quayPrices,
+      content: quayPricesContent(foundingBanner.id),
+      section: 'times',
+      author: timesEditor.id,
+      category: categories['Markets'],
+      featuredImage: foundingBanner.id,
+      publishedAt: '2026-07-06T08:00:00.000Z',
+      _status: 'published',
+    },
+  })
+
+  await ensureArticle(payload, {
+    title: 'Opinion: Who Keeps the Keepers?',
+    data: {
+      excerpt: excerpts.keepersOpEd,
+      content: keepersOpEdContent(),
+      section: 'times',
+      author: timesEditor.id,
+      category: categories['Opinion'],
+      publishedAt: '2026-07-03T18:00:00.000Z',
+      _status: 'published',
+    },
+  })
+
   // ── 5. Pages ──────────────────────────────────────────────────────────────
   await ensurePage(payload, 'about', {
     title: 'About Condoria',
@@ -281,9 +348,9 @@ async function seed(payload: Payload): Promise<void> {
 [seed]   username: ${adminUsername}  (password: your SEED_ADMIN_PASSWORD)
 [seed]   Demo accounts (change these passwords!): ${EDITOR.username}, ${RESIDENT.username}
 [seed]
-[seed] Visit:    ${serverURL}/           — the national gazette
-[seed]           ${serverURL}/articles   — all published articles
-[seed]           ${serverURL}/about      — the standing page
+[seed] Visit:    ${serverURL}/gov          — the government Gazette
+[seed]           ${serverURL}/times        — the Condor Times (independent press)
+[seed]           ${serverURL}/gov/about    — the standing page
 [seed] ────────────────────────────────────────────────────────────
 `)
 }

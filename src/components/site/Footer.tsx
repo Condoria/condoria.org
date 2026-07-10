@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { Crest } from './Crest'
 
 const FOOTER_LINKS = [
-  { href: '/articles', label: 'Articles', prefetch: undefined },
-  { href: '/about', label: 'About the Nation', prefetch: undefined },
-  { href: '/articles', label: 'Charter & Decrees', prefetch: undefined },
+  { href: '/gov/articles', label: 'The Gazette', prefetch: undefined },
+  { href: '/gov/about', label: 'About the Nation', prefetch: undefined },
+  { href: '/times', label: 'The Condor Times', prefetch: undefined },
   { href: '/admin', label: 'Registry (Admin)', prefetch: false },
 ] as const
 

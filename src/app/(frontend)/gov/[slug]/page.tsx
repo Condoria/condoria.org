@@ -46,10 +46,10 @@ export default async function StandingPage({ params }: Props) {
 
       <footer className="mt-14 border-t border-parchment-300 pt-6">
         <Link
-          href="/"
+          href="/gov"
           className="text-sm font-medium text-pine-700 transition-colors hover:text-pine-600"
         >
-          ← Home
+          ← The Gazette
         </Link>
       </footer>
     </article>

@@ -24,10 +24,10 @@ function parsePage(raw: string | string[] | undefined): number {
   return Number.isNaN(parsed) || parsed < 1 ? 1 : parsed
 }
 
-export default async function ArticlesIndexPage({ searchParams }: Props) {
+export default async function GovArticlesIndexPage({ searchParams }: Props) {
   const { page: rawPage } = await searchParams
   const page = parsePage(rawPage)
-  const result = await getArticlesPage(page)
+  const result = await getArticlesPage('government', page)
   const docs = result?.docs ?? []
   const totalDocs = result?.totalDocs ?? 0
 
@@ -71,7 +71,7 @@ export default async function ArticlesIndexPage({ searchParams }: Props) {
             There is no page {page} in the record.
           </p>
           <p className="mt-3 text-sm text-ink-500">
-            <Link href="/articles" className="font-medium text-pine-700 hover:text-pine-600">
+            <Link href="/gov/articles" className="font-medium text-pine-700 hover:text-pine-600">
               Return to the first page →
             </Link>
           </p>

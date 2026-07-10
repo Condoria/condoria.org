@@ -252,6 +252,131 @@ export const lanternFestivalContent = (): LexicalEditorState =>
     ),
   )
 
+// ════════════════════════════════════════════════════════════════════════════
+// THE CONDOR TIMES — the independent press (section: 'times')
+// A sharper, more journalistic voice than the state Gazette: markets, daily
+// life, and a healthy scepticism of the Chancellery.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Traders Balk as Vale Gate Toll Takes Effect (lead story) ────────────────
+
+export const valeGateTollContent = (): LexicalEditorState =>
+  root(
+    paragraph(
+      'The new toll at the Vale Gate — a copper for every laden cart passing into the ',
+      'capital — took effect at first light on market-day, and by mid-morning the queue at ',
+      'the gate was longer than the gatehouse ledger. The Chancellery says the coin will keep ',
+      'the Great North Road in repair. The traders who use that road are not yet convinced ',
+      'they should pay twice for a work they were told belonged to everyone.',
+    ),
+    block(
+      'quote',
+      {
+        quote:
+          'They cut the ribbon and told us the road was ours. A fortnight later they put a till at the gate. You cannot own a thing you are charged to cross.',
+        attribution: 'Bram Cartwright',
+        attributionTitle: 'of the Carters’ Benevolent Fund',
+      },
+      'A carter at the Vale Gate',
+    ),
+    paragraph(
+      'Under Article IV of the Charter, the North Road is a common work “belonging to all.” ',
+      'The Chancellery maintains that the toll funds upkeep, not ownership, and points to the ',
+      'wet-season washouts that closed the gorge section twice last year. The Times asked the ',
+      'Road Commission for the maintenance accounts promised “at the next assembly.” We were ',
+      'told they are forthcoming.',
+    ),
+    paragraph(
+      'For now the copper is collected, the queue lengthens, and the carters keep a tally of ',
+      'their own. This paper will publish both ledgers side by side when the Commission’s is ',
+      'finally laid open.',
+    ),
+  )
+
+// ── The North Road Ran Long, and Ran Over (investigation) ───────────────────
+
+export const roadOverrunContent = (): LexicalEditorState =>
+  root(
+    paragraph(
+      'When the Chancellor walked the length of the Great North Road at its opening, the ',
+      'Gazette recorded the soup and the applause. It did not record the figure the Times has ',
+      'since assembled from the Commission’s own posted tallies: the road came in at nearly ',
+      'half again its first estimate, and two seasons late.',
+    ),
+    paragraph(
+      'The overrun is no scandal on its own. Stone is heavy, the gorge is unkind, and the ',
+      'Sixstone Bridge alone swallowed a winter. But the nation was quoted one number when the ',
+      'work began, and paid a larger one when it ended — and the difference, with its reasons, ',
+      'is exactly what the Charter’s requirement to lay “the full accounts before the Council” ',
+      'exists to surface.',
+    ),
+    block(
+      'callout',
+      {
+        style: 'note',
+        title: 'What we asked',
+        body: 'The Times put five questions to the Road Commission regarding the final cost of the North Road and the two-season delay. This article will be updated when they are answered.',
+      },
+      'Questions to the Commission',
+    ),
+    paragraph(
+      'The road is, by every account, a fine road. The Times’ quarrel is not with the stone ',
+      'but with the arithmetic — and with how long the nation was left to wait before it was ',
+      'allowed to see the sum.',
+    ),
+  )
+
+// ── Opinion: Who Keeps the Keepers? (editorial) ─────────────────────────────
+
+export const keepersOpEdContent = (): LexicalEditorState =>
+  root(
+    paragraph(
+      'This paper is glad the National Monument shines again. We are gladder still that the ',
+      'Keeper of Records restored it in the open — with posted accounts, named quarries, and ',
+      'thanks paid to every hand that touched the work. That is how the nation’s business ',
+      'ought to be done, and it throws into sharp relief how rarely the rest of it is.',
+    ),
+    paragraph(
+      'The Chancellery keeps the archive, sets the tolls, and reviews its own works. In a ',
+      'nation of eleven founders that was trust. In a nation of this size it is a habit worth ',
+      'examining. An independent press is not an enemy of the Council; it is the Council’s ',
+      'ledger, kept by someone the Council does not pay.',
+    ),
+    paragraph(
+      'We will go on printing the questions until the answers are printed beside them. That ',
+      'is the whole of our programme, and we commend it to our readers and our Chancellor ',
+      'alike.',
+    ),
+    paragraph(text('— The Editors, The Condor Times', ITALIC)),
+  )
+
+// ── Quay Prices Climb as the Stores Run Thin (markets) ──────────────────────
+
+export const quayPricesContent = (quayBannerMediaId: number): LexicalEditorState =>
+  root(
+    paragraph(
+      'The price of salt-fish, lamp-oil and good rope has risen sharply on the South Quay ',
+      'this fortnight, as the last boats before the ice come in light and the winter stores ',
+      'are drawn down. The fishers blame the weather; the buyers blame the fishers; the ',
+      'harbour-master blames, as ever, the moon.',
+    ),
+    block(
+      'image',
+      {
+        image: quayBannerMediaId,
+        caption: 'The South Quay at first light, where the winter market sets its prices.',
+        layout: 'wide',
+      },
+      'The winter market on the South Quay',
+    ),
+    paragraph(
+      'The Times will post the quay prices each week through the winter, so that a household ',
+      'on the terraces knows what a household on the quay is paying before it sets out with ',
+      'a basket. Bring this paper to market — it argues well, and folds smaller than a ',
+      'ledger.',
+    ),
+  )
+
 // ── About Condoria (standing page) ──────────────────────────────────────────
 
 export const aboutContent = (): LexicalEditorState =>
@@ -314,4 +439,12 @@ export const excerpts = {
     'Forty-two hundred blocks of graded stone from the Vale Gate to the high pass: the nation’s largest common work is open to all.',
   lanternFestival:
     'A resident’s proposal that the nation keep a midsummer Lantern Festival on the water of the South Quay.',
+  valeGateToll:
+    'The Chancellery’s new toll at the Vale Gate is meant to keep the North Road in repair. The traders who use it are not convinced they should pay twice for a road they were told was theirs.',
+  roadOverrun:
+    'The Gazette recorded the soup and the applause at the road’s opening. It did not record the figure: nearly half again the first estimate, and two seasons late.',
+  keepersOpEd:
+    'The Monument was restored in the open, with posted accounts. An editorial on why so little of the rest of the nation’s business is.',
+  quayPrices:
+    'Salt-fish, lamp-oil and good rope are dearer on the South Quay this fortnight, as the last boats before the ice come in light and the winter stores run thin.',
 } as const

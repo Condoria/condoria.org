@@ -4,7 +4,7 @@ import Link from 'next/link'
 import type { Article } from '@/payload-types'
 
 import { Crest } from './Crest'
-import { formatDate, resolveImage } from './format'
+import { articleHref, formatDate, resolveImage } from './format'
 
 /**
  * The standard gazette card, shared by the homepage and the article index.
@@ -18,7 +18,7 @@ export function ArticleCard({ article }: { article: Article }) {
   const author = article.author && typeof article.author === 'object' ? article.author : null
   const dateTime = article.publishedAt ?? article.createdAt
   const date = formatDate(dateTime)
-  const href = article.slug ? `/articles/${article.slug}` : '/articles'
+  const href = articleHref(article)
 
   return (
     <article className="group relative flex flex-col border border-parchment-300 bg-parchment-50 transition-colors hover:border-gold-400">
