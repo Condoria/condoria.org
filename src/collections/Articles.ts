@@ -12,21 +12,26 @@ import {
 import { contentBlocks } from '../blocks/config'
 import { slugField } from '../fields/slug'
 
-/** Count model3d blocks anywhere in a Lexical editor state. */
-const countModel3DBlocks = (node: unknown): number => {
-  if (Array.isArray(node)) return node.reduce((sum: number, child) => sum + countModel3DBlocks(child), 0)
+/** Block types reserved for editors and admins (heavy interactive exhibits). */
+const RESTRICTED_BLOCKS = new Set(['model3d', 'litematic'])
+
+/** Count restricted (editor-only) blocks anywhere in a Lexical editor state. */
+const countRestrictedBlocks = (node: unknown): number => {
+  if (Array.isArray(node))
+    return node.reduce((sum: number, child) => sum + countRestrictedBlocks(child), 0)
   if (node && typeof node === 'object') {
     const record = node as Record<string, unknown>
     const fields = record.fields as Record<string, unknown> | undefined
-    const self = record.type === 'block' && fields?.blockType === 'model3d' ? 1 : 0
-    return self + countModel3DBlocks(record.children ?? (record.root ? [record.root] : []))
+    const self =
+      record.type === 'block' && RESTRICTED_BLOCKS.has(fields?.blockType as string) ? 1 : 0
+    return self + countRestrictedBlocks(record.children ?? (record.root ? [record.root] : []))
   }
   return 0
 }
 
 /**
- * Residents cannot publish, and cannot add 3D model blocks (the block is
- * reserved for editors and admins). Draft saves stay fully available to them.
+ * Residents cannot publish, and cannot add the editor-only exhibit blocks (3D
+ * model, Litematica build). Draft saves stay fully available to them.
  */
 const enforceResidentLimits: CollectionBeforeChangeHook = ({ data, originalDoc, req }) => {
   if (!req.user || hasRole(req.user, 'editor', 'admin')) return data
@@ -38,10 +43,10 @@ const enforceResidentLimits: CollectionBeforeChangeHook = ({ data, originalDoc, 
     )
   }
 
-  const before = countModel3DBlocks(originalDoc?.content ?? null)
-  const after = countModel3DBlocks(data?.content ?? null)
+  const before = countRestrictedBlocks(originalDoc?.content ?? null)
+  const after = countRestrictedBlocks(data?.content ?? null)
   if (after > before) {
-    throw new APIError('The 3D model block is available to editors and admins only.', 403)
+    throw new APIError('The 3D model and Litematica blocks are available to editors and admins only.', 403)
   }
 
   return data

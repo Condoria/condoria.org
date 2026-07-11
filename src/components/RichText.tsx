@@ -17,6 +17,7 @@ import type {
   EmbedBlockType,
   GalleryBlockType,
   ImageBlockType,
+  LitematicBlockType,
   Model3DBlockType,
   Page,
   QuoteBlockType,
@@ -26,6 +27,7 @@ import { CalloutBlock } from '@/blocks/components/Callout'
 import { EmbedBlock } from '@/blocks/components/Embed'
 import { GalleryBlock } from '@/blocks/components/Gallery'
 import { ImageBlock } from '@/blocks/components/Image'
+import { LitematicBlock } from '@/blocks/components/Litematic'
 import { Model3DBlock } from '@/blocks/components/Model3D'
 import { QuoteBlock } from '@/blocks/components/Quote'
 import { cn } from '@/blocks/components/shared'
@@ -35,6 +37,7 @@ type ContentBlocks =
   | EmbedBlockType
   | GalleryBlockType
   | ImageBlockType
+  | LitematicBlockType
   | Model3DBlockType
   | QuoteBlockType
 
@@ -62,6 +65,7 @@ const converters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => 
     embed: ({ node }) => <EmbedBlock {...node.fields} />,
     gallery: ({ node }) => <GalleryBlock {...node.fields} />,
     image: ({ node }) => <ImageBlock {...node.fields} />,
+    litematic: ({ node }) => <LitematicBlock {...node.fields} />,
     model3d: ({ node }) => <Model3DBlock {...node.fields} />,
     quote: ({ node }) => <QuoteBlock {...node.fields} />,
   },

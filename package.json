@@ -6,8 +6,9 @@
   "type": "module",
   "packageManager": "pnpm@11.11.0",
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
-    "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "assets:mc": "node scripts/fetch-mc-assets.mjs",
+    "dev": "node scripts/fetch-mc-assets.mjs && cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "build": "node scripts/fetch-mc-assets.mjs && cross-env NODE_OPTIONS=--no-deprecation next build",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "typecheck": "tsc --noEmit",
@@ -16,7 +17,9 @@
     "ship": "node scripts/ship.mjs",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
-    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/index.ts"
+    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/index.ts",
+    "test:litematic": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/test-litematic.ts",
+    "test:uvlock": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/test-uvlock.ts"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.85.2",
@@ -28,8 +31,11 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.3.0",
     "cross-env": "^7.0.3",
+    "deepslate": "^0.26.0",
     "dotenv": "16.4.7",
+    "gl-matrix": "^3.4.4",
     "graphql": "^16.8.1",
+    "nbtify": "^2.2.0",
     "next": "16.2.6",
     "payload": "3.85.2",
     "react": "19.2.6",

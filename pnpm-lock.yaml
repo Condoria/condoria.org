@@ -35,12 +35,21 @@ importers:
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
+      deepslate:
+        specifier: ^0.26.0
+        version: 0.26.0
       dotenv:
         specifier: 16.4.7
         version: 16.4.7
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
       graphql:
         specifier: ^16.8.1
         version: 16.14.2
+      nbtify:
+        specifier: ^2.2.0
+        version: 2.2.0
       next:
         specifier: 16.2.6
         version: 16.2.6(@babel/core@7.29.7)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.101.0)
@@ -2444,6 +2453,9 @@ packages:
     resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
     engines: {node: '>=0.10.0'}
 
+  deepslate@0.26.0:
+    resolution: {integrity: sha512-pSL6sBEoGDdXUgQQHjB4RWSp1fdGEZbrw90rRRGRdX6EV3TEORKpPEDXHQYBBXjTaKwpp+UUSOEWqyAThaj5UA==}
+
   define-data-property@1.1.4:
     resolution: {integrity: sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==}
     engines: {node: '>= 0.4'}
@@ -2941,6 +2953,9 @@ packages:
 
   get-tsconfig@4.8.1:
     resolution: {integrity: sha512-k9PN+cFBmaLWtVz29SkUoqU5O0slLuHJXt/2P+tMVFT+phsSGXGkp9t3rQIqdz0e+06EHNGs3oM6ZX1s2zHxRg==}
+
+  gl-matrix@3.4.4:
+    resolution: {integrity: sha512-latSnyDNt/8zYUB6VIJ6PCh2jBjJX6gnDsoCZ7LyW7GkqrD51EWwa9qCoGixj8YqBtETQK/xY7OmpTF8xz1DdQ==}
 
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
@@ -3601,6 +3616,9 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
+  mutf-8@1.2.3:
+    resolution: {integrity: sha512-/pveRxQPswCpnf78iPHGvrxhIAeVYhcui9Se6gr/E9KaZFz+5uexv8bgPGAzXKPdnnIijs9yUsDggxEu4n7Hxg==}
+
   nanoid@3.3.15:
     resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -3613,6 +3631,10 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
+
+  nbtify@2.2.0:
+    resolution: {integrity: sha512-xlMI29ZAB4ZCBJRnoa+L8al8uKMTLSwrcx13LbdhFLc3KwJb0sWS4/OcKEN2UcjQOVNyk+CqDWfYvPLOo8of/g==}
+    hasBin: true
 
   next@16.2.6:
     resolution: {integrity: sha512-qOVgKJg1+At15NpeUP+eJgCHvTCgXsogweq87Ri/Ix7PkqQHg4sdaXmSFqKlgaIXE4kW0g25LE68W87UANlHtw==}
@@ -3716,6 +3738,9 @@ packages:
   p-locate@5.0.0:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
+
+  pako@2.2.0:
+    resolution: {integrity: sha512-zJq6RP/5q+TO2OpFV3FHzlPnFjmkb7Nc99a5SNjJE+uu/PkpChs+NIZSSzbBoD+6kjiISXjfYdwj1ZRQ81dz/w==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -6831,6 +6856,12 @@ snapshots:
 
   deepmerge@4.3.1: {}
 
+  deepslate@0.26.0:
+    dependencies:
+      gl-matrix: 3.4.4
+      md5: 2.3.0
+      pako: 2.2.0
+
   define-data-property@1.1.4:
     dependencies:
       es-define-property: 1.0.1
@@ -7514,6 +7545,8 @@ snapshots:
   get-tsconfig@4.8.1:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  gl-matrix@3.4.4: {}
 
   glob-parent@5.1.2:
     dependencies:
@@ -8259,11 +8292,17 @@ snapshots:
 
   ms@2.1.3: {}
 
+  mutf-8@1.2.3: {}
+
   nanoid@3.3.15: {}
 
   napi-postinstall@0.3.4: {}
 
   natural-compare@1.4.0: {}
+
+  nbtify@2.2.0:
+    dependencies:
+      mutf-8: 1.2.3
 
   next@16.2.6(@babel/core@7.29.7)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(sass@1.101.0):
     dependencies:
@@ -8384,6 +8423,8 @@ snapshots:
   p-locate@5.0.0:
     dependencies:
       p-limit: 3.1.0
+
+  pako@2.2.0: {}
 
   parent-module@1.0.1:
     dependencies:

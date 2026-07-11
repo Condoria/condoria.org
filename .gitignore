@@ -22,6 +22,10 @@
 # local media uploads (dev)
 /media
 
+# vanilla Minecraft block assets for the Litematica viewer — Mojang IP, never
+# committed; fetched at dev/build time by scripts/fetch-mc-assets.mjs
+/public/litematic
+
 # seed-generated banner images (recreated by `pnpm seed`)
 /src/seed/assets/*.png
 

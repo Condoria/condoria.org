@@ -23,7 +23,16 @@ export const Media: CollectionConfig = {
     staticDir: path.resolve(dirname, '../../media'),
     // application/octet-stream is allowed because some browsers/OSes upload
     // .glb files with that generic type instead of model/gltf-binary.
-    mimeTypes: ['image/*', 'model/gltf-binary', 'application/octet-stream'],
+    // application/gzip (+ x-gzip) is required for Litematica .litematic files:
+    // they are gzip-compressed NBT, so Payload's content sniffing reports gzip
+    // regardless of the generic type the browser sends.
+    mimeTypes: [
+      'image/*',
+      'model/gltf-binary',
+      'application/octet-stream',
+      'application/gzip',
+      'application/x-gzip',
+    ],
     imageSizes: [
       { name: 'thumbnail', width: 480 },
       { name: 'card', width: 960 },

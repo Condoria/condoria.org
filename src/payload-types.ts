@@ -641,6 +641,24 @@ export interface Model3DBlockType {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "LitematicBlockType".
+ */
+export interface LitematicBlockType {
+  /**
+   * A .litematic file from the media library (exported from the Litematica mod).
+   */
+  schematic: number | Media;
+  caption?: string | null;
+  /**
+   * Slowly turn the build until the visitor interacts.
+   */
+  autoRotate?: boolean | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'litematic';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "auth".
  */
 export interface Auth {

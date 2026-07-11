@@ -154,6 +154,37 @@ export const Model3DBlock: Block = {
   ],
 }
 
+export const LitematicBlock: Block = {
+  slug: 'litematic',
+  interfaceName: 'LitematicBlockType',
+  labels: { singular: 'Litematica Build', plural: 'Litematica Builds' },
+  admin: {
+    disableBlockName: false,
+  },
+  fields: [
+    {
+      name: 'schematic',
+      type: 'upload',
+      relationTo: 'media',
+      required: true,
+      admin: {
+        description:
+          'A .litematic file from the media library (exported from the Litematica mod).',
+      },
+      // .litematic and .glb both upload as application/octet-stream, so filter
+      // by filename rather than MIME to keep the picker to schematics.
+      filterOptions: { filename: { like: 'litematic' } },
+    },
+    { name: 'caption', type: 'text' },
+    {
+      name: 'autoRotate',
+      type: 'checkbox',
+      defaultValue: true,
+      admin: { description: 'Slowly turn the build until the visitor interacts.' },
+    },
+  ],
+}
+
 /** Every block available in article/page content, in menu order. */
 export const contentBlocks: Block[] = [
   CalloutBlock,
@@ -162,4 +193,5 @@ export const contentBlocks: Block[] = [
   GalleryBlock,
   EmbedBlock,
   Model3DBlock,
+  LitematicBlock,
 ]
