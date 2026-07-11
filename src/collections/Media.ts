@@ -25,13 +25,21 @@ export const Media: CollectionConfig = {
     // .glb files with that generic type instead of model/gltf-binary.
     // application/gzip (+ x-gzip) is required for Litematica .litematic files:
     // they are gzip-compressed NBT, so Payload's content sniffing reports gzip
-    // regardless of the generic type the browser sends.
+    // regardless of the generic type the browser sends — that's the server-side
+    // validation.
+    //
+    // The bare ".litematic" is for the file PICKER: Payload builds the input's
+    // `accept` attribute from this list, and Windows/macOS map an unregistered
+    // extension to NO MIME type, so without the literal extension the OS file
+    // dialog greys out .litematic files. It's inert for server validation (a
+    // sniffed MIME type never starts with ".litematic").
     mimeTypes: [
       'image/*',
       'model/gltf-binary',
       'application/octet-stream',
       'application/gzip',
       'application/x-gzip',
+      '.litematic',
     ],
     imageSizes: [
       { name: 'thumbnail', width: 480 },
