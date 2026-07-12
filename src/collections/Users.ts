@@ -20,6 +20,12 @@ export const Users: CollectionConfig = {
     },
   },
   access: {
+    // Gate the admin panel to staff. Residents get a branded register on the
+    // front end instead (src/app/(frontend)/account) and are redirected away
+    // from /admin by middleware.ts — this is the enforced, server-side boundary.
+    // (Inlined rather than the `isEditorOrAdmin` Access helper: `access.admin`
+    // must return a plain boolean, not a Where query.)
+    admin: ({ req }) => hasRole(req.user, 'editor', 'admin'),
     create: isAdmin,
     delete: isAdmin,
     // Everyone can see who exists (needed for author bylines in the admin UI);
