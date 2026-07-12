@@ -1,6 +1,6 @@
 import { Structure } from 'deepslate/core'
 
-import type { LitematicModel } from '@/lib/litematic/parse'
+import { forEachSolidBlock, type LitematicModel } from '@/lib/litematic/parse'
 
 export type BuiltStructure = {
   structure: Structure
@@ -30,32 +30,27 @@ export function litematicToStructure(model: LitematicModel): BuiltStructure {
   const hi: [number, number, number] = [-Infinity, -Infinity, -Infinity]
 
   for (const region of model.regions) {
-    const [sx, sy, sz] = region.size
-    const plane = sx * sz
     const ox = region.min[0] - mx
     const oy = region.min[1] - my
     const oz = region.min[2] - mz
-    const { indices, isAir, palette } = region
+    const { palette } = region
 
-    for (let y = 0; y < sy; y++) {
-      for (let z = 0; z < sz; z++) {
-        for (let x = 0; x < sx; x++) {
-          const idx = indices[y * plane + z * sx + x]
-          if (isAir[idx]) continue
-          const px = ox + x
-          const py = oy + y
-          const pz = oz + z
-          const block = palette[idx]
-          structure.addBlock([px, py, pz], block.name, block.properties)
-          lo[0] = Math.min(lo[0], px)
-          lo[1] = Math.min(lo[1], py)
-          lo[2] = Math.min(lo[2], pz)
-          hi[0] = Math.max(hi[0], px)
-          hi[1] = Math.max(hi[1], py)
-          hi[2] = Math.max(hi[2], pz)
-        }
-      }
-    }
+    // Stream non-air voxels straight into the sparse Structure — the parser
+    // decodes indices on demand (see forEachSolidBlock), so we never hold a
+    // dense per-voxel array for the whole (possibly huge, mostly-air) region.
+    forEachSolidBlock(region, (x, y, z, idx) => {
+      const px = ox + x
+      const py = oy + y
+      const pz = oz + z
+      const block = palette[idx]
+      structure.addBlock([px, py, pz], block.name, block.properties)
+      lo[0] = Math.min(lo[0], px)
+      lo[1] = Math.min(lo[1], py)
+      lo[2] = Math.min(lo[2], pz)
+      hi[0] = Math.max(hi[0], px)
+      hi[1] = Math.max(hi[1], py)
+      hi[2] = Math.max(hi[2], pz)
+    })
   }
 
   if (lo[0] === Infinity) {

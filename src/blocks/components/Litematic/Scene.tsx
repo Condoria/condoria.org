@@ -16,7 +16,7 @@ import { StructureRenderer } from 'deepslate'
 import { mat4 } from 'gl-matrix'
 import { useEffect, useRef, useState } from 'react'
 
-import { parseLitematic } from '@/lib/litematic/parse'
+import { parseLitematic, SchematicTooLargeError } from '@/lib/litematic/parse'
 
 import { cn } from '../shared'
 import { bakeAmbientOcclusion, fixAtlasFilter } from './deepslate/ambientOcclusion'
@@ -197,8 +197,8 @@ export default function Scene({ autoRotate, url }: SceneProps) {
             })
             .then(parseLitematic),
         ])
-      } catch {
-        if (!cancelled) setStatus('error')
+      } catch (err) {
+        if (!cancelled) setStatus(err instanceof SchematicTooLargeError ? 'toobig' : 'error')
         return
       }
       if (cancelled) return
@@ -222,7 +222,17 @@ export default function Scene({ autoRotate, url }: SceneProps) {
       let radius: number
       try {
         const built = litematicToStructure(model)
-        renderer = new StructureRenderer(gl, built.structure, resources, { chunkSize: 16 })
+        // useInvisibleBlockBuffer:false is essential, not cosmetic: with it on
+        // (DeepSlate's default) the renderer's constructor sweeps EVERY voxel of
+        // the bounding box and builds a wireframe line-cube per air voxel — an
+        // O(volume) allocation of Line/Vertex objects that OOMs the tab on a
+        // large, mostly-air build. We only ever call drawStructure(), never
+        // drawInvisibleBlocks(), so that debug mesh is pure waste. Off, the
+        // renderer's cost tracks the non-air block count instead of the volume.
+        renderer = new StructureRenderer(gl, built.structure, resources, {
+          chunkSize: 16,
+          useInvisibleBlockBuffer: false,
+        })
         // Prefer the antialiased-nearest shader (crisp AND crawl-free); if the
         // GPU lacks derivatives, fall back to plain mipmapped filtering.
         const atlas = resources.getTextureAtlas()
