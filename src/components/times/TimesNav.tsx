@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { AccountLink } from '@/components/site/AccountLink'
+
 /**
  * The Condor Times masthead: a utility bar, a bold Archivo nameplate in the
  * flag's maroon over a warm news ground, gold rules, and a section bar. The
@@ -12,9 +14,13 @@ export function TimesNav() {
       <div className="bg-maroon-800 text-news-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-1.5 text-[10px] uppercase tracking-[0.2em] sm:text-[11px]">
           <span>Independent Press of the High Valley</span>
-          <Link href="/gov" className="transition-colors hover:text-tgold-300">
-            Condoria Gazette&nbsp;↗
-          </Link>
+          <div className="flex items-center gap-3">
+            <AccountLink className="transition-colors hover:text-tgold-300" />
+            <span aria-hidden="true" className="h-3 w-px bg-news-50/30" />
+            <Link href="/gov" className="transition-colors hover:text-tgold-300">
+              Condoria Gazette&nbsp;↗
+            </Link>
+          </div>
         </div>
       </div>
 

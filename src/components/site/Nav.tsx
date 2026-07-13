@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { AccountLink } from './AccountLink'
 import { Crest } from './Crest'
 
 const NAV_LINKS = [
@@ -56,6 +57,10 @@ export function Nav() {
               Condor Times
               <span aria-hidden="true">↗</span>
             </Link>
+          </li>
+          <li aria-hidden="true" className="hidden h-4 w-px bg-parchment-200/25 sm:block" />
+          <li>
+            <AccountLink className="text-[13px] font-medium uppercase tracking-[0.18em] text-parchment-200 transition-colors hover:text-gold-200 focus-visible:outline-gold-300" />
           </li>
         </ul>
       </nav>
