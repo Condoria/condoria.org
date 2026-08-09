@@ -14,6 +14,7 @@ import {
 import type {
   Article,
   CalloutBlockType,
+  DiscordBlockType,
   EmbedBlockType,
   GalleryBlockType,
   ImageBlockType,
@@ -24,6 +25,7 @@ import type {
 } from '@/payload-types'
 
 import { CalloutBlock } from '@/blocks/components/Callout'
+import { DiscordBlock } from '@/blocks/components/Discord'
 import { EmbedBlock } from '@/blocks/components/Embed'
 import { GalleryBlock } from '@/blocks/components/Gallery'
 import { ImageBlock } from '@/blocks/components/Image'
@@ -34,6 +36,7 @@ import { cn } from '@/blocks/components/shared'
 
 type ContentBlocks =
   | CalloutBlockType
+  | DiscordBlockType
   | EmbedBlockType
   | GalleryBlockType
   | ImageBlockType
@@ -62,6 +65,7 @@ const converters: JSXConvertersFunction<NodeTypes> = ({ defaultConverters }) => 
   ...LinkJSXConverter({ internalDocToHref }),
   blocks: {
     callout: ({ node }) => <CalloutBlock {...node.fields} />,
+    discord: ({ node }) => <DiscordBlock {...node.fields} />,
     embed: ({ node }) => <EmbedBlock {...node.fields} />,
     gallery: ({ node }) => <GalleryBlock {...node.fields} />,
     image: ({ node }) => <ImageBlock {...node.fields} />,
@@ -174,9 +178,10 @@ type RichTextProps = {
 }
 
 /**
- * Renders Lexical rich text content, including all six custom blocks
- * (callout, quote, image, gallery, embed, model3d). Server-safe: the only
- * client code is behind the Model3D block's dynamic import.
+ * Renders Lexical rich text content, including every custom block (callout,
+ * quote, image, gallery, embed, discord, model3d, litematic). Server-safe: the
+ * only client code is the Discord block's audio/spoiler island and the
+ * Model3D/Litematic dynamic imports.
  */
 export function RichText({ data, className, tone = 'gazette' }: RichTextProps) {
   if (!data?.root?.children?.length) return null

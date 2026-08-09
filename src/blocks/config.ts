@@ -185,6 +185,156 @@ export const LitematicBlock: Block = {
   ],
 }
 
+export const DiscordBlock: Block = {
+  slug: 'discord',
+  interfaceName: 'DiscordBlockType',
+  labels: { singular: 'Discord Quote', plural: 'Discord Quotes' },
+  admin: { disableBlockName: false },
+  fields: [
+    {
+      name: 'channel',
+      type: 'text',
+      admin: {
+        description:
+          'Channel the exchange happened in, e.g. "town-hall" (the # is added). Leave empty to hide the channel bar.',
+      },
+    },
+    {
+      name: 'messages',
+      type: 'array',
+      required: true,
+      minRows: 1,
+      labels: { singular: 'Message', plural: 'Messages' },
+      admin: {
+        description:
+          'In order, oldest first. Consecutive messages from the same author are grouped under one name and avatar, exactly as Discord does.',
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'author',
+              type: 'text',
+              required: true,
+              admin: {
+                width: '50%',
+                description: 'Display name. Spell it identically to group messages together.',
+              },
+            },
+            {
+              name: 'timestamp',
+              type: 'text',
+              admin: {
+                width: '50%',
+                description: 'Free text, in Discord\'s own wording — e.g. "Today at 21:14".',
+              },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'avatar',
+              type: 'upload',
+              relationTo: 'media',
+              filterOptions: { mimeType: { contains: 'image' } },
+              admin: {
+                width: '50%',
+                description:
+                  'Set once per person — later messages from the same name reuse it. Without one, a lettered default avatar is drawn.',
+              },
+            },
+            {
+              name: 'roleColour',
+              type: 'text',
+              validate: (value: unknown) =>
+                typeof value !== 'string' ||
+                value === '' ||
+                /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value.trim()) ||
+                'Enter a hex colour such as #c9a52f.',
+              admin: {
+                width: '50%',
+                description: 'Name colour from their top Discord role, e.g. #c9a52f. Also set once per person.',
+              },
+            },
+          ],
+        },
+        {
+          name: 'body',
+          type: 'textarea',
+          admin: {
+            description:
+              'Discord markdown: **bold**, *italic*, __underline__, ~~strike~~, `code`, ```code blocks```, > quotes, ||spoilers||, links, @mentions and #channels.',
+          },
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'image',
+              type: 'upload',
+              relationTo: 'media',
+              filterOptions: { mimeType: { contains: 'image' } },
+              admin: { width: '50%', description: 'Image attached to this message.' },
+            },
+            {
+              name: 'audio',
+              type: 'upload',
+              relationTo: 'media',
+              filterOptions: { mimeType: { contains: 'audio' } },
+              admin: { width: '50%', description: 'Audio attached to this message, shown as a player.' },
+            },
+          ],
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'bot',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Bot / app',
+              admin: { width: '33%', description: 'Adds the APP tag beside the name.' },
+            },
+            {
+              name: 'edited',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: { width: '33%', description: 'Adds the "(edited)" marker.' },
+            },
+            {
+              name: 'startNewGroup',
+              type: 'checkbox',
+              defaultValue: false,
+              label: 'Repeat the name',
+              admin: {
+                width: '33%',
+                description: 'Break the grouping and show name and avatar again — as Discord does after a gap in time.',
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: 'sourceUrl',
+      type: 'text',
+      label: 'Link to the message',
+      admin: {
+        description:
+          'Optional. Right-click the message in Discord → Copy Message Link. Turns the "Discord" pill on the frame into a link to the source.',
+      },
+    },
+    {
+      name: 'caption',
+      type: 'text',
+      admin: { description: 'Optional subtext beneath the quote, for context or attribution.' },
+    },
+  ],
+}
+
 /** Every block available in article/page content, in menu order. */
 export const contentBlocks: Block[] = [
   CalloutBlock,
@@ -192,6 +342,7 @@ export const contentBlocks: Block[] = [
   ImageBlock,
   GalleryBlock,
   EmbedBlock,
+  DiscordBlock,
   Model3DBlock,
   LitematicBlock,
 ]

@@ -11,7 +11,8 @@ export const Media: CollectionConfig = {
   slug: 'media',
   admin: {
     group: 'Content',
-    description: 'Images and 3D models (.glb). Alt text is required for accessibility.',
+    description:
+      'Images, audio clips, 3D models (.glb) and Litematica schematics. Alt text is required for accessibility.',
   },
   access: {
     read: () => true,
@@ -35,6 +36,8 @@ export const Media: CollectionConfig = {
     // sniffed MIME type never starts with ".litematic").
     mimeTypes: [
       'image/*',
+      // Voice clips and audio attachments quoted in the Discord Quote block.
+      'audio/*',
       'model/gltf-binary',
       'application/octet-stream',
       'application/gzip',

@@ -120,17 +120,41 @@ Collections (`src/collections/`):
 - **Users** — name, username, role (`resident | editor | admin`); no email
   (see [No email, anywhere](#no-email-anywhere)).
 
-Article and page content is a Lexical rich-text field with six custom blocks
+Article and page content is a Lexical rich-text field with eight custom blocks
 (schema in `src/blocks/config.ts`, renderers in `src/blocks/components/`):
 
-| Block     | Purpose                                                                  |
-| --------- | ------------------------------------------------------------------------ |
-| `callout` | Boxed aside in `note`, `decree` or `warning` style, with optional title. |
-| `quote`   | Pull quote with optional attribution and attribution title.              |
-| `image`   | Single captioned image, `standard` or `wide` layout.                     |
-| `gallery` | Grid of captioned images in 2 or 3 columns.                              |
-| `embed`   | YouTube/Vimeo player from a URL; other URLs render as a link card.       |
-| `model3d` | Interactive three.js viewer for a `.glb` from the media library, with optional auto-rotate. |
+| Block       | Purpose                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
+| `callout`   | Boxed aside in `note`, `decree` or `warning` style, with optional title. |
+| `quote`     | Pull quote with optional attribution and attribution title.              |
+| `image`     | Single captioned image, `standard` or `wide` layout.                     |
+| `gallery`   | Grid of captioned images in 2 or 3 columns.                              |
+| `embed`     | YouTube/Vimeo player from a URL; other URLs render as a link card.       |
+| `discord`   | An exchange quoted from Discord, rendered as Discord renders it. See below. |
+| `model3d`   | Interactive three.js viewer for a `.glb` from the media library, with optional auto-rotate. |
+| `litematic` | Interactive viewer for a Litematica `.litematic` build (editors and admins only). |
+
+### Quoting Discord
+
+The `discord` block replaces the screenshot people usually paste. Give it a
+list of messages in order and it lays them out the way the client does —
+40px avatars in a 72px gutter, and **consecutive messages from one author
+grouped under a single name and timestamp**. Per message you can attach an
+image or an audio clip (played in a Discord-style player), flag it as
+`edited`, or tick *Repeat the name* to break a group where Discord would, at a
+gap in time. Avatar, role colour and the bot tag are set **once per person**;
+later messages from the same name reuse them.
+
+Message text takes Discord's own markdown — `**bold**`, `*italic*`,
+`__underline__`, `~~strike~~`, `` `code` ``, ```` ```code blocks``` ````,
+`> quotes`, `||spoilers||`, links, `@mentions` and `#channels`. It is parsed
+into React elements, never HTML, so a pasted message cannot inject markup;
+`pnpm test:discord` covers the parser, including that escaping.
+
+The frame carries a "Discord" pill on its top border (which becomes a link to
+the source when a message link is set), an optional `#channel` bar, and an
+optional caption beneath it. Image attachments are shown as previews — GIFs
+play — rather than linking out to the raw file.
 
 ## Database adapters
 

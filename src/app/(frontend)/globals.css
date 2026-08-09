@@ -68,9 +68,34 @@
   --color-news-700: #453c36;
   --color-news-900: #1a1310;
 
+  /*
+   * Discord's own dark palette — used ONLY by the Discord Quote content block
+   * (src/blocks/components/Discord), so a quoted exchange looks like the real
+   * client rather than a re-skin of it. These are Discord's dark-theme values:
+   * dc-chat = --background-primary, dc-panel = --background-secondary,
+   * dc-well = --background-tertiary, dc-text = --text-normal,
+   * dc-name = --header-primary, dc-muted = --text-muted,
+   * dc-icon = --interactive-normal, dc-blurple = --brand-experiment.
+   * Not part of the Condoria design system — do not use them elsewhere.
+   */
+  --color-dc-chat: #313338;
+  --color-dc-panel: #2b2d31;
+  --color-dc-well: #1e1f22;
+  --color-dc-line: #3f4147;
+  --color-dc-text: #dbdee1;
+  --color-dc-name: #f2f3f5;
+  --color-dc-muted: #949ba4;
+  --color-dc-icon: #b5bac1;
+  --color-dc-bar: #4e5058;
+  --color-dc-link: #00a8fc;
+  --color-dc-blurple: #5865f2;
+  --color-dc-mention: #dee0fc;
+
   --font-display: var(--font-fraunces), 'Fraunces', Georgia, 'Times New Roman', serif;
   --font-body: var(--font-public-sans), 'Public Sans', system-ui, -apple-system, sans-serif;
   --font-news: var(--font-archivo), 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  /* Discord ships "gg sans"; visitors won't have it, so this is its fallback stack. */
+  --font-discord: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 @layer base {

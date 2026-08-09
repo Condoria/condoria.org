@@ -218,7 +218,7 @@ export interface Category {
   createdAt: string;
 }
 /**
- * Images and 3D models (.glb). Alt text is required for accessibility.
+ * Images, audio clips, 3D models (.glb) and Litematica schematics. Alt text is required for accessibility.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "media".
@@ -620,6 +620,73 @@ export interface EmbedBlockType {
   id?: string | null;
   blockName?: string | null;
   blockType: 'embed';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "DiscordBlockType".
+ */
+export interface DiscordBlockType {
+  /**
+   * Channel the exchange happened in, e.g. "town-hall" (the # is added). Leave empty to hide the channel bar.
+   */
+  channel?: string | null;
+  /**
+   * In order, oldest first. Consecutive messages from the same author are grouped under one name and avatar, exactly as Discord does.
+   */
+  messages: {
+    /**
+     * Display name. Spell it identically to group messages together.
+     */
+    author: string;
+    /**
+     * Free text, in Discord's own wording — e.g. "Today at 21:14".
+     */
+    timestamp?: string | null;
+    /**
+     * Set once per person — later messages from the same name reuse it. Without one, a lettered default avatar is drawn.
+     */
+    avatar?: (number | null) | Media;
+    /**
+     * Name colour from their top Discord role, e.g. #c9a52f. Also set once per person.
+     */
+    roleColour?: string | null;
+    /**
+     * Discord markdown: **bold**, *italic*, __underline__, ~~strike~~, `code`, ```code blocks```, > quotes, ||spoilers||, links, @mentions and #channels.
+     */
+    body?: string | null;
+    /**
+     * Image attached to this message.
+     */
+    image?: (number | null) | Media;
+    /**
+     * Audio attached to this message, shown as a player.
+     */
+    audio?: (number | null) | Media;
+    /**
+     * Adds the APP tag beside the name.
+     */
+    bot?: boolean | null;
+    /**
+     * Adds the "(edited)" marker.
+     */
+    edited?: boolean | null;
+    /**
+     * Break the grouping and show name and avatar again — as Discord does after a gap in time.
+     */
+    startNewGroup?: boolean | null;
+    id?: string | null;
+  }[];
+  /**
+   * Optional. Right-click the message in Discord → Copy Message Link. Turns the "Discord" pill on the frame into a link to the source.
+   */
+  sourceUrl?: string | null;
+  /**
+   * Optional subtext beneath the quote, for context or attribution.
+   */
+  caption?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'discord';
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
