@@ -14,6 +14,7 @@ Vercel Blob in production.
 - [Content model](#content-model)
 - [Database adapters](#database-adapters)
 - [Deploying to production](#deploying-to-production-vercel--neon--vercel-blob)
+- [Claude Code cloud sessions](#claude-code-cloud-sessions)
 - [Extending the CMS with custom blocks](#extending-the-cms-with-custom-blocks)
 - [Scripts](#scripts)
 - [Project layout](#project-layout)
@@ -252,6 +253,36 @@ migrations, the verify script) use `pnpm prod <args>`, e.g.
    migrates, seeds and deploys in one go. Change the demo account passwords
    immediately after the first seed, or delete those accounts.
 7. Deploy, sign in at `https://condoria.vercel.app/admin`, and raise the flag.
+
+## Claude Code cloud sessions
+
+The repo is ready for Claude Code cloud sessions (claude.ai/code). A
+SessionStart hook in `.claude/settings.json` runs
+`scripts/cloud-session-start.sh`, which installs dependencies from the
+lockfile and fetches the Minecraft assets. It runs only when
+`CLAUDE_CODE_REMOTE=true`, so local sessions skip it.
+
+Configure the cloud environment like this:
+
+- **Network access:** Trusted (the default). `registry.npmjs.org` and
+  `raw.githubusercontent.com` are on its default list, and dev needs nothing
+  else.
+- **Environment variables:** none needed. Without them the app uses SQLite, a
+  dev-only secret and the seed's demo accounts. **Never** add the `.env.ship`
+  values (Neon `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN`). Every command in the
+  session can read them, and dev mode against production Postgres breaks
+  migrations (see [Database adapters](#database-adapters)).
+- **Setup script:** pin the pnpm version from `packageManager`:
+
+  ```sh
+  #!/bin/bash
+  set -euo pipefail
+  npm install -g pnpm@11.11.0
+  ```
+
+Deploys stay local: merge to `main` and run `pnpm ship` from your machine. In
+cloud sessions, open pull requests with the **Create PR** button. The cloud
+GitHub proxy rejects `gh pr create`.
 
 ## Extending the CMS with custom blocks
 
